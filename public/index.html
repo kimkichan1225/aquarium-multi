@@ -1875,9 +1875,6 @@ socket.on('fishAdded', (data) => {
   fish.nameTimer = 4;
   fish.showName = true;
   fishes.push(fish);
-  if(data.ownerId !== myUid) {
-    showToast(`${data.ownerName}님이 "${data.name}" 을(를) 수조에 넣었습니다!`);
-  }
   updateMyFishList();
 });
 
