@@ -1036,6 +1036,159 @@ const SPECIES = [
       ctx.fill();
     }
   },
+  // 13: 만타가오리
+  {
+    name:'만타가오리',
+    bodyW:0.35, bodyH:0.15, sizeRange:[35,60],
+    defaultColors: {body:'#2C3E6B',fin:'#3A5199',belly:'#E8E8F0',accent:'#1A2744'},
+    draw(ctx, sz, p, tw, fw, t) {
+      // 넓은 날개 (좌우 대칭)
+      const wingFlap = Math.sin(t * 1.8) * 0.15;
+
+      // 꼬리 (긴 채찍형)
+      ctx.save(); ctx.translate(-sz*0.4, 0); ctx.rotate(tw * 0.5);
+      ctx.strokeStyle = p.accent;
+      ctx.lineWidth = sz * 0.04;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      const tailWave = Math.sin(t * 2) * sz * 0.1;
+      ctx.quadraticCurveTo(-sz*0.4, tailWave, -sz*0.8, tailWave * 1.5);
+      ctx.stroke();
+      ctx.restore();
+
+      // 왼쪽 날개
+      ctx.save();
+      ctx.transform(1, wingFlap, 0, 1, 0, 0);
+      const lwg = ctx.createRadialGradient(0, -sz*0.15, 0, 0, -sz*0.3, sz*0.7);
+      lwg.addColorStop(0, p.body); lwg.addColorStop(1, p.body + '88');
+      ctx.fillStyle = lwg;
+      ctx.beginPath();
+      ctx.moveTo(sz*0.15, -sz*0.05);
+      ctx.bezierCurveTo(sz*0.1, -sz*0.3, -sz*0.1, -sz*0.55, -sz*0.05, -sz*0.7);
+      ctx.bezierCurveTo(-sz*0.15, -sz*0.65, -sz*0.35, -sz*0.35, -sz*0.3, -sz*0.05);
+      ctx.closePath(); ctx.fill();
+      ctx.restore();
+
+      // 오른쪽 날개
+      ctx.save();
+      ctx.transform(1, -wingFlap, 0, 1, 0, 0);
+      const rwg = ctx.createRadialGradient(0, sz*0.15, 0, 0, sz*0.3, sz*0.7);
+      rwg.addColorStop(0, p.body); rwg.addColorStop(1, p.body + '88');
+      ctx.fillStyle = rwg;
+      ctx.beginPath();
+      ctx.moveTo(sz*0.15, sz*0.05);
+      ctx.bezierCurveTo(sz*0.1, sz*0.3, -sz*0.1, sz*0.55, -sz*0.05, sz*0.7);
+      ctx.bezierCurveTo(-sz*0.15, sz*0.65, -sz*0.35, sz*0.35, -sz*0.3, sz*0.05);
+      ctx.closePath(); ctx.fill();
+      ctx.restore();
+
+      // 몸통 (다이아몬드형)
+      const bg = ctx.createRadialGradient(sz*0.05, 0, sz*0.03, 0, 0, sz*0.35);
+      bg.addColorStop(0, p.belly); bg.addColorStop(0.4, p.body); bg.addColorStop(1, p.accent);
+      ctx.fillStyle = bg;
+      ctx.beginPath();
+      ctx.moveTo(sz*0.35, 0);
+      ctx.bezierCurveTo(sz*0.3, -sz*0.12, sz*0.1, -sz*0.18, -sz*0.2, -sz*0.06);
+      ctx.bezierCurveTo(-sz*0.35, 0, -sz*0.35, 0, -sz*0.2, sz*0.06);
+      ctx.bezierCurveTo(sz*0.1, sz*0.18, sz*0.3, sz*0.12, sz*0.35, 0);
+      ctx.closePath(); ctx.fill();
+
+      // 배 부분 (밝은 색)
+      ctx.fillStyle = p.belly + 'AA';
+      ctx.beginPath();
+      ctx.ellipse(sz*0.05, 0, sz*0.18, sz*0.06, 0, 0, TAU);
+      ctx.fill();
+
+      // 머리 뿔 (두갈래)
+      ctx.fillStyle = p.body;
+      ctx.beginPath();
+      ctx.moveTo(sz*0.3, -sz*0.08);
+      ctx.quadraticCurveTo(sz*0.45, -sz*0.15, sz*0.5, -sz*0.12);
+      ctx.quadraticCurveTo(sz*0.42, -sz*0.06, sz*0.3, -sz*0.05);
+      ctx.closePath(); ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(sz*0.3, sz*0.08);
+      ctx.quadraticCurveTo(sz*0.45, sz*0.15, sz*0.5, sz*0.12);
+      ctx.quadraticCurveTo(sz*0.42, sz*0.06, sz*0.3, sz*0.05);
+      ctx.closePath(); ctx.fill();
+    }
+  },
+  // 14: 범고래
+  {
+    name:'범고래',
+    bodyW:0.5, bodyH:0.3, sizeRange:[38,65],
+    defaultColors: {body:'#1A1A2E',fin:'#2A2A40',belly:'#F0F0F5',accent:'#E8E8F0'},
+    draw(ctx, sz, p, tw, fw, t) {
+      // 꼬리지느러미 (수평 갈래)
+      ctx.save(); ctx.translate(-sz*0.5, 0); ctx.rotate(tw);
+      ctx.fillStyle = p.body;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.bezierCurveTo(-sz*0.15, -sz*0.08, -sz*0.3, -sz*0.25, -sz*0.45, -sz*0.2);
+      ctx.bezierCurveTo(-sz*0.35, -sz*0.1, -sz*0.2, -sz*0.02, 0, 0);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.bezierCurveTo(-sz*0.15, sz*0.08, -sz*0.3, sz*0.25, -sz*0.45, sz*0.2);
+      ctx.bezierCurveTo(-sz*0.35, sz*0.1, -sz*0.2, sz*0.02, 0, 0);
+      ctx.fill();
+      ctx.restore();
+
+      // 등지느러미 (크고 삼각형)
+      ctx.fillStyle = p.body;
+      ctx.beginPath();
+      ctx.moveTo(-sz*0.05, -sz*0.28);
+      ctx.quadraticCurveTo(sz*0.05, -sz*0.55, sz*0.18, -sz*0.5);
+      ctx.quadraticCurveTo(sz*0.15, -sz*0.35, sz*0.2, -sz*0.25);
+      ctx.closePath(); ctx.fill();
+
+      // 가슴지느러미
+      ctx.save(); ctx.translate(sz*0.15, sz*0.15);
+      ctx.rotate(fw * 0.3);
+      ctx.fillStyle = p.body;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.bezierCurveTo(sz*0.05, sz*0.1, -sz*0.1, sz*0.25, -sz*0.15, sz*0.2);
+      ctx.bezierCurveTo(-sz*0.1, sz*0.1, -sz*0.05, sz*0.03, 0, 0);
+      ctx.fill();
+      ctx.restore();
+
+      // 몸통 (유선형, 위는 검정 아래는 흰색)
+      // 검은 등 부분
+      const topGrad = ctx.createLinearGradient(0, -sz*0.3, 0, 0);
+      topGrad.addColorStop(0, p.body); topGrad.addColorStop(1, p.fin);
+      ctx.fillStyle = topGrad;
+      ctx.beginPath();
+      ctx.moveTo(sz*0.5, 0);
+      ctx.bezierCurveTo(sz*0.5, -sz*0.2, sz*0.3, -sz*0.32, 0, -sz*0.3);
+      ctx.bezierCurveTo(-sz*0.3, -sz*0.28, -sz*0.5, -sz*0.15, -sz*0.5, 0);
+      ctx.lineTo(sz*0.5, 0);
+      ctx.closePath(); ctx.fill();
+
+      // 흰 배 부분
+      const botGrad = ctx.createLinearGradient(0, 0, 0, sz*0.25);
+      botGrad.addColorStop(0, p.belly); botGrad.addColorStop(1, p.accent + 'CC');
+      ctx.fillStyle = botGrad;
+      ctx.beginPath();
+      ctx.moveTo(sz*0.5, 0);
+      ctx.bezierCurveTo(sz*0.48, sz*0.15, sz*0.3, sz*0.25, 0, sz*0.22);
+      ctx.bezierCurveTo(-sz*0.3, sz*0.2, -sz*0.48, sz*0.1, -sz*0.5, 0);
+      ctx.lineTo(sz*0.5, 0);
+      ctx.closePath(); ctx.fill();
+
+      // 눈 뒤 흰 반점 (범고래 특징)
+      ctx.fillStyle = p.belly;
+      ctx.beginPath();
+      ctx.ellipse(sz*0.32, -sz*0.12, sz*0.08, sz*0.04, 0.3, 0, TAU);
+      ctx.fill();
+
+      // 턱 아래 흰색 패치
+      ctx.fillStyle = p.belly + 'DD';
+      ctx.beginPath();
+      ctx.ellipse(sz*0.35, sz*0.06, sz*0.06, sz*0.03, -0.2, 0, TAU);
+      ctx.fill();
+    }
+  },
 ];
 
 // ══════════════════════
