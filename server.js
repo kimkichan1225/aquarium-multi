@@ -30,14 +30,25 @@ io.on('connection', (socket) => {
       name: data.name || '이름없는 물고기',
       speciesIdx: data.speciesIdx,
       customColors: data.customColors,
+      size: data.size,
       x: data.x,
       y: data.y,
       dir: data.dir || 1,
+      temporary: data.temporary || false,
+      lifespan: data.lifespan || null,
       createdAt: Date.now()
     };
     fishes.set(fish.id, fish);
     io.emit('fishAdded', fish);
-    console.log(`물고기 추가: ${fish.name} by ${fish.ownerName}`);
+    console.log(`물고기 추가: ${fish.name} by ${fish.ownerName}${fish.temporary ? ' (임시)' : ''}`);
+
+    // 임시 물고기는 수명 후 서버에서도 제거
+    if (fish.temporary && fish.lifespan) {
+      setTimeout(() => {
+        fishes.delete(fish.id);
+        io.emit('fishRemoved', fish.id);
+      }, fish.lifespan * 1000);
+    }
   });
 
   // 물고기 제거 (자기 물고기만)

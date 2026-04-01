@@ -106,6 +106,20 @@
   }
   .form-group input[type="text"]:focus{border-color:rgba(100,180,255,0.35)}
 
+  /* 크기 슬라이더 */
+  .size-slider-row{display:flex;align-items:center;gap:12px}
+  .size-slider-row input[type="range"]{
+    flex:1;-webkit-appearance:none;appearance:none;height:4px;
+    background:rgba(100,180,255,0.15);border-radius:2px;outline:none;
+  }
+  .size-slider-row input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:16px;height:16px;border-radius:50%;
+    background:rgba(100,200,255,0.7);cursor:pointer;
+  }
+  .size-slider-row .size-value{
+    color:rgba(160,220,255,0.7);font-size:12px;min-width:28px;text-align:center;
+  }
+
   /* 종 선택 그리드 */
   .species-grid{
     display:grid;grid-template-columns:repeat(4,1fr);gap:8px;
@@ -199,6 +213,8 @@
   <button class="btn primary" id="btn-create">+ 물고기 만들기</button>
   <button class="btn" id="btn-feed">먹이주기 (F)</button>
   <button class="btn" id="btn-my-fish">내 물고기</button>
+  <button class="btn" id="btn-random">야생 물고기 (A)</button>
+  <button class="btn" id="btn-jelly">해파리 (J)</button>
   <button class="btn" id="btn-bubble">기포 (B)</button>
   <button class="btn" id="btn-night">야간모드 (N)</button>
 </div>
@@ -221,6 +237,16 @@
       <div class="form-group">
         <label>종류 선택</label>
         <div class="species-grid" id="species-grid"></div>
+      </div>
+
+      <div class="form-group">
+        <label>크기</label>
+        <div class="size-slider-row">
+          <span style="color:rgba(140,200,255,0.4);font-size:10px">작게</span>
+          <input type="range" id="input-size" min="0" max="100" value="50">
+          <span style="color:rgba(140,200,255,0.4);font-size:10px">크게</span>
+          <span class="size-value" id="size-value">50</span>
+        </div>
       </div>
 
       <div class="form-group">
@@ -716,6 +742,128 @@ const SPECIES = [
       }
     }
   },
+  // 12: 해파리
+  {
+    name:'해파리',
+    bodyW:0.4, bodyH:0.5, sizeRange:[20,50],
+    isJellyfish: true,
+    defaultColors: {body:'#B48CFF',fin:'#C8A0FF',belly:'#D4B0FF',accent:'#E8D0FF'},
+    jellyPalettes: [
+      {body:'#B48CFF',fin:'#C8A0FF',belly:'#D4B0FF',accent:'#E8D0FF'},
+      {body:'#FF8CB4',fin:'#FFA0C8',belly:'#FFB0D4',accent:'#FFD0E8'},
+      {body:'#8CDCFF',fin:'#A0E6FF',belly:'#B0ECFF',accent:'#D0F4FF'},
+      {body:'#8CFFC8',fin:'#A0FFDC',belly:'#B0FFE4',accent:'#D0FFF0'},
+      {body:'#FFDC8C',fin:'#FFE6A0',belly:'#FFECB0',accent:'#FFF4D0'},
+    ],
+    draw(ctx, sz, p, tw, fw, t) {
+      // 해파리 고유 색상 (반투명 rgba 변환)
+      const hexToRgb = (hex) => {
+        const r = parseInt(hex.slice(1,3),16);
+        const g = parseInt(hex.slice(3,5),16);
+        const b = parseInt(hex.slice(5,7),16);
+        return `${r},${g},${b}`;
+      };
+      const bodyRgb = hexToRgb(p.body);
+      const finRgb = hexToRgb(p.fin);
+      const bellyRgb = hexToRgb(p.belly);
+
+      const pulse = Math.sin(t * 2);
+      const squeeze = 1 + pulse * 0.15;
+      const stretch = 1 - pulse * 0.1;
+      const bellBottom = sz * 0.15 * stretch;
+
+      // 글로우
+      const glowR = sz * 1.5;
+      const gg = ctx.createRadialGradient(0, -sz*0.15, 0, 0, -sz*0.1, glowR);
+      gg.addColorStop(0, `rgba(${bodyRgb},0.15)`);
+      gg.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = gg;
+      ctx.beginPath(); ctx.arc(0, -sz*0.1, glowR, 0, TAU); ctx.fill();
+
+      // 촉수들
+      const tentacles = 10;
+      for (let i = 0; i < tentacles; i++) {
+        const spread = sz * 0.38 * squeeze;
+        const tx = (i - (tentacles-1)/2) / ((tentacles-1)/2) * spread * 0.8;
+        const len = sz * 2.5;
+        ctx.beginPath();
+        ctx.moveTo(tx, bellBottom);
+        for (let j = 1; j <= 8; j++) {
+          const frac = j / 8;
+          const wave = Math.sin(t * (1 + i*0.2) + i * 0.8 + frac * 4) * sz * 0.12 * frac * (0.5 + i*0.1);
+          ctx.lineTo(tx + wave, bellBottom + frac * len);
+        }
+        ctx.strokeStyle = `rgba(${bodyRgb},0.2)`;
+        ctx.lineWidth = clamp(sz * 0.025, 0.5, 2.5);
+        ctx.stroke();
+      }
+
+      // 메인 촉수 4개
+      for (let i = 0; i < 4; i++) {
+        const spread = sz * 0.3 * squeeze;
+        const tx = (i - 1.5) / 1.5 * spread * 0.6;
+        const len = sz * 2.5 * 1.4;
+        ctx.beginPath();
+        ctx.moveTo(tx, bellBottom);
+        for (let j = 1; j <= 12; j++) {
+          const frac = j / 12;
+          const wave = Math.sin(t * 1.2 + i * 2 + frac * 5) * sz * 0.2 * frac;
+          ctx.lineTo(tx + wave, bellBottom + frac * len);
+        }
+        ctx.strokeStyle = `rgba(${bodyRgb},0.2)`;
+        ctx.lineWidth = clamp(sz * 0.04, 0.8, 3.5);
+        ctx.stroke();
+      }
+
+      // 벨 (우산)
+      ctx.save();
+      ctx.scale(squeeze, stretch);
+      const bellGrad = ctx.createRadialGradient(0, -sz*0.15, 0, 0, -sz*0.05, sz*0.5);
+      bellGrad.addColorStop(0, `rgba(${bellyRgb},0.5)`);
+      bellGrad.addColorStop(0.6, `rgba(${bodyRgb},0.3)`);
+      bellGrad.addColorStop(1, 'rgba(255,255,255,0.05)');
+      ctx.fillStyle = bellGrad;
+      ctx.beginPath();
+      ctx.moveTo(-sz*0.4, sz*0.15);
+      ctx.bezierCurveTo(-sz*0.45, -sz*0.15, -sz*0.3, -sz*0.5, 0, -sz*0.55);
+      ctx.bezierCurveTo(sz*0.3, -sz*0.5, sz*0.45, -sz*0.15, sz*0.4, sz*0.15);
+      for (let i = 0; i < 8; i++) {
+        const frac = 1 - i / 8;
+        const fx = sz * 0.4 * (2*frac - 1);
+        const fy = sz * 0.15 + Math.sin(t * 3 + i * 1.2) * sz * 0.025;
+        ctx.quadraticCurveTo(fx + sz*0.05, fy + sz*0.04, fx, fy);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // 내부 기관
+      ctx.fillStyle = `rgba(${bellyRgb},0.5)`;
+      ctx.globalAlpha *= 0.6;
+      ctx.beginPath();
+      ctx.ellipse(0, -sz*0.18, sz*0.15, sz*0.1, 0, 0, TAU);
+      ctx.fill();
+      ctx.strokeStyle = `rgba(${bellyRgb},0.5)`;
+      ctx.lineWidth = 0.8;
+      for (let i = 0; i < 4; i++) {
+        const a = i * TAU / 4 + t * 0.5;
+        ctx.beginPath();
+        ctx.moveTo(0, -sz*0.18);
+        ctx.quadraticCurveTo(Math.cos(a)*sz*0.12, -sz*0.05, Math.cos(a+0.5)*sz*0.08, sz*0.05);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // 하이라이트
+      ctx.globalAlpha *= 0.6;
+      ctx.fillStyle = 'rgba(255,255,255,0.3)';
+      ctx.beginPath();
+      ctx.ellipse(-sz*0.1, -sz*0.35, sz*0.08, sz*0.06, -0.4, 0, TAU);
+      ctx.fill();
+    }
+  },
 ];
 
 // ══════════════════════
@@ -726,6 +874,7 @@ class Fish {
     const si = data.speciesIdx !== undefined ? data.speciesIdx : Math.floor(rand(0, SPECIES.length));
     this.species = SPECIES[si];
     this.speciesIdx = si;
+    this.isJellyfish = this.species.isJellyfish || false;
     this.id = data.id;
     this.ownerId = data.ownerId;
     this.ownerName = data.ownerName || '익명';
@@ -734,11 +883,15 @@ class Fish {
     this.y = data.y || rand(120, H-200);
     this.palette = data.customColors || this.species.defaultColors;
     const sr = this.species.sizeRange;
-    this.size = rand(sr[0], sr[1]);
-    this.speed = rand(0.4, 1.2);
+    this.size = data.size || rand(sr[0], sr[1]);
+    this.speed = this.isJellyfish ? rand(0.15, 0.4) : rand(0.4, 1.2);
     this.dir = data.dir || (Math.random()>0.5?1:-1);
-    this.vx = this.speed*this.dir;
-    this.vy = rand(-0.2,0.2);
+    this.vx = this.isJellyfish ? 0 : this.speed*this.dir;
+    this.vy = this.isJellyfish ? -this.speed : rand(-0.2,0.2);
+    // 해파리 전용
+    this.pulsePhase = rand(0, TAU);
+    this.pulseSpeed = rand(1.2, 2.5);
+    this.driftPhase = rand(0, TAU);
     this.targetVx = this.vx;
     this.targetVy = this.vy;
     this.turnCooldown = rand(2,8);
@@ -749,13 +902,21 @@ class Fish {
     this.wanderAngle = rand(0,TAU);
     this.z = rand(0.6,1.2);
     this.actualSize = this.size*this.z;
-    this.opacity = 0.5+this.z*0.4;
+    this.opacity = this.isJellyfish ? (0.3 + this.z * 0.35) : (0.5+this.z*0.4);
     this.mouthOpen = 0;
     this.blinkTimer = rand(3,8);
     this.blinking = false;
     this.blinkDuration = 0;
     this.showName = false;
     this.nameTimer = 0;
+    // 임시 물고기 (A키로 생성) 수명
+    this.temporary = data.temporary || false;
+    this.lifespan = data.lifespan || (data.temporary ? rand(15, 30) : Infinity);
+    this.age = 0;
+    this.dying = false; // 거품 사라짐 중
+    this.dyingProgress = 0;
+    this.dead = false;
+    this.deathBubbles = []; // 사라질 때 생성되는 거품들
   }
 
   update(dt) {
@@ -768,52 +929,147 @@ class Fish {
     if(this.nameTimer>0) this.nameTimer -= dt;
     else this.showName = false;
 
-    if(this.chasingFood&&this.chasingFood.eaten) this.chasingFood=null;
-    if(this.chasingFood){
-      const f=this.chasingFood, dx=f.x-this.x, dy=f.y-this.y, d=Math.hypot(dx,dy);
-      if(d<this.actualSize*0.5){f.eaten=true;this.chasingFood=null;this.mouthOpen=0.3;setTimeout(()=>this.mouthOpen=0,300);}
-      else{this.targetVx=(dx/d)*this.speed*2.5;this.targetVy=(dy/d)*this.speed*2.5;this.dir=this.targetVx>0?1:-1;}
-    } else {
-      this.turnCooldown-=dt;
-      if(this.turnCooldown<=0){
-        this.wanderAngle+=rand(-0.8,0.8);
-        this.targetVx=Math.cos(this.wanderAngle)*this.speed;
-        this.targetVy=Math.sin(this.wanderAngle)*this.speed*0.4;
-        if(Math.abs(this.targetVx)>0.1)this.dir=this.targetVx>0?1:-1;
-        this.turnCooldown=rand(2,6);
+    // 임시 물고기 수명 처리
+    if(this.temporary) {
+      this.age += dt;
+      if(this.age >= this.lifespan && !this.dying) {
+        this.dying = true;
+        // 거품 파티클 생성
+        for(let i = 0; i < 12; i++) {
+          this.deathBubbles.push({
+            x: this.x + rand(-this.actualSize, this.actualSize) * 0.5,
+            y: this.y + rand(-this.actualSize, this.actualSize) * 0.5,
+            size: rand(2, 6),
+            vy: rand(-0.5, -1.5),
+            vx: rand(-0.3, 0.3),
+            opacity: rand(0.5, 0.9)
+          });
+        }
       }
-      if(foods.length>0 && (frameCount+this.id)%FOOD_SEARCH_INTERVAL===0){
-        let closest=null,closestDist=300;
-        for(let fi=0;fi<foods.length;fi++){const f=foods[fi];if(f.eaten)continue;const dx=f.x-this.x,dy=f.y-this.y,d=Math.sqrt(dx*dx+dy*dy);if(d<closestDist){closest=f;closestDist=d;}}
-        if(closest)this.chasingFood=closest;
+      if(this.dying) {
+        this.dyingProgress += dt * 0.7; // ~1.4초에 걸쳐 사라짐
+        if(this.dyingProgress >= 1) this.dead = true;
       }
     }
-    const margin=80;
-    if(this.x<margin)this.targetVx=Math.abs(this.targetVx);
-    if(this.x>W-margin)this.targetVx=-Math.abs(this.targetVx);
-    if(this.y<margin+48)this.targetVy=Math.abs(this.targetVy)*0.5;
-    if(this.y>H-140)this.targetVy=-Math.abs(this.targetVy)*0.5;
 
-    // 마우스 회피
-    const curDist=dist(this.x,this.y,mx,my);
-    if(curDist<70&&!this.chasingFood){
-      const angle=Math.atan2(this.y-my,this.x-mx);
-      const flee = (70-curDist)/70;
-      this.targetVx+=Math.cos(angle)*flee*1.2;
-      this.targetVy+=Math.sin(angle)*flee*0.3;
-      this.tailSpeed=8;
-    } else { this.tailSpeed=lerp(this.tailSpeed,rand(3,6),0.02); }
-    this.vx=lerp(this.vx,this.targetVx,0.03*s);
-    this.vy=lerp(this.vy,this.targetVy,0.03*s);
-    this.x+=this.vx*s; this.y+=this.vy*s;
-    this.x=clamp(this.x,20,W-20); this.y=clamp(this.y,68,H-100);
-    if(Math.abs(this.vx)>0.05)this.dir=this.vx>0?1:-1;
+    if(this.isJellyfish) {
+      // 해파리 전용 움직임
+      this.pulsePhase += this.pulseSpeed * dt;
+      this.driftPhase += 0.3 * dt;
+      const pulse = Math.sin(this.pulsePhase);
+      this.vy = -this.speed * (0.5 + 0.5 * Math.max(0, -pulse));
+      this.vx = Math.sin(this.driftPhase) * 0.2;
+      // 커서 회피
+      const curDist = dist(this.x, this.y, mx, my);
+      if(curDist < 60) {
+        const angle = Math.atan2(this.y - my, this.x - mx);
+        const flee = (60 - curDist) / 60;
+        this.vx += Math.cos(angle) * flee * 0.3;
+        this.vy += Math.sin(angle) * flee * 0.1;
+      }
+      this.x += this.vx * s;
+      this.y += this.vy * s;
+      // 화면 밖으로 나가면 아래에서 다시 등장
+      if(this.y < -this.actualSize * 3) this.y = H + this.actualSize;
+      if(this.y > H + this.actualSize * 2) this.y = -this.actualSize * 2;
+      this.x = clamp(this.x, 20, W - 20);
+    } else {
+      // 물고기 움직임
+      if(this.chasingFood&&this.chasingFood.eaten) this.chasingFood=null;
+      if(this.chasingFood){
+        const f=this.chasingFood, dx=f.x-this.x, dy=f.y-this.y, d=Math.hypot(dx,dy);
+        if(d<this.actualSize*0.5){f.eaten=true;this.chasingFood=null;this.mouthOpen=0.3;setTimeout(()=>this.mouthOpen=0,300);}
+        else{this.targetVx=(dx/d)*this.speed*2.5;this.targetVy=(dy/d)*this.speed*2.5;this.dir=this.targetVx>0?1:-1;}
+      } else {
+        this.turnCooldown-=dt;
+        if(this.turnCooldown<=0){
+          this.wanderAngle+=rand(-0.8,0.8);
+          this.targetVx=Math.cos(this.wanderAngle)*this.speed;
+          this.targetVy=Math.sin(this.wanderAngle)*this.speed*0.4;
+          if(Math.abs(this.targetVx)>0.1)this.dir=this.targetVx>0?1:-1;
+          this.turnCooldown=rand(2,6);
+        }
+        if(foods.length>0 && (frameCount+this.id)%FOOD_SEARCH_INTERVAL===0){
+          let closest=null,closestDist=300;
+          for(let fi=0;fi<foods.length;fi++){const f=foods[fi];if(f.eaten)continue;const dx=f.x-this.x,dy=f.y-this.y,d=Math.sqrt(dx*dx+dy*dy);if(d<closestDist){closest=f;closestDist=d;}}
+          if(closest)this.chasingFood=closest;
+        }
+      }
+      const margin=80;
+      if(this.x<margin)this.targetVx=Math.abs(this.targetVx);
+      if(this.x>W-margin)this.targetVx=-Math.abs(this.targetVx);
+      if(this.y<margin+48)this.targetVy=Math.abs(this.targetVy)*0.5;
+      if(this.y>H-140)this.targetVy=-Math.abs(this.targetVy)*0.5;
+
+      // 마우스 회피
+      const curDist=dist(this.x,this.y,mx,my);
+      if(curDist<70&&!this.chasingFood){
+        const angle=Math.atan2(this.y-my,this.x-mx);
+        const flee = (70-curDist)/70;
+        this.targetVx+=Math.cos(angle)*flee*1.2;
+        this.targetVy+=Math.sin(angle)*flee*0.3;
+        this.tailSpeed=8;
+      } else { this.tailSpeed=lerp(this.tailSpeed,rand(3,6),0.02); }
+      this.vx=lerp(this.vx,this.targetVx,0.03*s);
+      this.vy=lerp(this.vy,this.targetVy,0.03*s);
+      this.x+=this.vx*s; this.y+=this.vy*s;
+      this.x=clamp(this.x,20,W-20); this.y=clamp(this.y,68,H-100);
+      if(Math.abs(this.vx)>0.05)this.dir=this.vx>0?1:-1;
+    }
+  }
+
+  drawDeathBubbles(dt) {
+    for(let i = this.deathBubbles.length - 1; i >= 0; i--) {
+      const b = this.deathBubbles[i];
+      b.y += b.vy;
+      b.x += b.vx + Math.sin(time * 3 + i) * 0.3;
+      b.opacity -= 0.008;
+      if(b.opacity <= 0) { this.deathBubbles.splice(i, 1); continue; }
+      ctx.save();
+      ctx.globalAlpha = b.opacity;
+      const g = ctx.createRadialGradient(b.x - b.size*0.3, b.y - b.size*0.3, 0, b.x, b.y, b.size);
+      g.addColorStop(0, 'rgba(180,230,255,0.2)');
+      g.addColorStop(0.7, 'rgba(120,200,255,0.1)');
+      g.addColorStop(1, 'rgba(100,180,255,0.25)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(b.x, b.y, b.size, 0, TAU); ctx.fill();
+      ctx.strokeStyle = 'rgba(160,220,255,0.35)';
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      ctx.beginPath();
+      ctx.ellipse(b.x - b.size*0.25, b.y - b.size*0.25, b.size*0.2, b.size*0.15, -0.5, 0, TAU);
+      ctx.fill();
+      ctx.restore();
+    }
   }
 
   draw() {
+    // 거품 사라짐 중이면 거품만 그리기
+    if(this.dying) {
+      // 사라지는 동안 물고기를 축소+투명하게
+      const fadeOut = 1 - this.dyingProgress;
+      if(fadeOut > 0) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.globalAlpha = this.opacity * fadeOut * fadeOut;
+        ctx.scale(fadeOut, fadeOut);
+        // 떨림 효과
+        ctx.translate(rand(-2,2), rand(-2,2));
+        this._drawBody();
+        ctx.restore();
+      }
+      this.drawDeathBubbles();
+      return;
+    }
+
     ctx.save();
     ctx.translate(this.x, this.y);
+    this._drawBody();
+    ctx.restore();
+  }
 
+  _drawBody() {
     // 이름 표시 (호버 또는 생성 직후)
     if(this.showName || this.nameTimer > 0){
       ctx.save();
@@ -831,53 +1087,58 @@ class Fish {
       ctx.restore();
     }
 
-    ctx.scale(this.dir, 1);
+    if(!this.isJellyfish) ctx.scale(this.dir, 1);
     ctx.globalAlpha = this.opacity;
     const sz = this.actualSize;
     const tw2 = Math.sin(this.tailPhase)*0.3;
     const fw = Math.sin(this.finPhase)*0.2;
-    const bodyStretch = 1+Math.abs(this.vx)*0.02;
-    ctx.scale(bodyStretch, 1/bodyStretch);
 
-    this.species.draw(ctx, sz, this.palette, tw2, fw, time);
-
-    // 광택
-    const shG = ctx.createRadialGradient(sz*0.1,-sz*0.1,0,sz*0.1,-sz*0.1,sz*0.25);
-    shG.addColorStop(0,'rgba(255,255,255,0.25)');
-    shG.addColorStop(1,'rgba(255,255,255,0)');
-    ctx.fillStyle=shG;
-    ctx.beginPath(); ctx.ellipse(sz*0.1,-sz*0.08,sz*0.2,sz*0.12,-0.2,0,TAU); ctx.fill();
-
-    // 눈
-    const bw = this.species.bodyW||0.5;
-    const eyeX = sz*(bw-0.1);
-    const eyeY = -sz*0.06;
-    const eyeR = sz*0.07;
-    ctx.fillStyle='#FAFAFA';
-    ctx.beginPath(); ctx.ellipse(eyeX,eyeY,eyeR,eyeR*0.95,0,0,TAU); ctx.fill();
-    if(!this.blinking){
-      ctx.fillStyle='#1A1A2E';
-      ctx.beginPath(); ctx.arc(eyeX+1,eyeY,eyeR*0.55,0,TAU); ctx.fill();
-      ctx.fillStyle='rgba(255,255,255,0.8)';
-      ctx.beginPath(); ctx.arc(eyeX+eyeR*0.2,eyeY-eyeR*0.25,eyeR*0.25,0,TAU); ctx.fill();
+    if(this.isJellyfish) {
+      // 해파리는 종 draw만 호출 (눈/입/광택 없음)
+      this.species.draw(ctx, sz, this.palette, tw2, fw, time);
     } else {
-      ctx.strokeStyle='#1A1A2E'; ctx.lineWidth=1.5;
-      ctx.beginPath(); ctx.moveTo(eyeX-eyeR,eyeY); ctx.lineTo(eyeX+eyeR,eyeY); ctx.stroke();
-    }
+      const bodyStretch = 1+Math.abs(this.vx)*0.02;
+      ctx.scale(bodyStretch, 1/bodyStretch);
 
-    // 입
-    const mx2 = sz*(bw+0.05);
-    const my2 = sz*0.04;
-    if(this.mouthOpen>0){
-      ctx.fillStyle='#2A1A3A';
-      ctx.beginPath(); ctx.arc(mx2,my2,sz*0.035,0,TAU); ctx.fill();
-    } else {
-      ctx.strokeStyle='rgba(0,0,0,0.2)'; ctx.lineWidth=0.8;
-      ctx.beginPath(); ctx.moveTo(mx2-sz*0.02,my2);
-      ctx.quadraticCurveTo(mx2,my2+sz*0.02,mx2+sz*0.015,my2);
-      ctx.stroke();
-    }
-    ctx.restore();
+      this.species.draw(ctx, sz, this.palette, tw2, fw, time);
+
+      // 광택
+      const shG = ctx.createRadialGradient(sz*0.1,-sz*0.1,0,sz*0.1,-sz*0.1,sz*0.25);
+      shG.addColorStop(0,'rgba(255,255,255,0.25)');
+      shG.addColorStop(1,'rgba(255,255,255,0)');
+      ctx.fillStyle=shG;
+      ctx.beginPath(); ctx.ellipse(sz*0.1,-sz*0.08,sz*0.2,sz*0.12,-0.2,0,TAU); ctx.fill();
+
+      // 눈
+      const bw = this.species.bodyW||0.5;
+      const eyeX = sz*(bw-0.1);
+      const eyeY = -sz*0.06;
+      const eyeR = sz*0.07;
+      ctx.fillStyle='#FAFAFA';
+      ctx.beginPath(); ctx.ellipse(eyeX,eyeY,eyeR,eyeR*0.95,0,0,TAU); ctx.fill();
+      if(!this.blinking){
+        ctx.fillStyle='#1A1A2E';
+        ctx.beginPath(); ctx.arc(eyeX+1,eyeY,eyeR*0.55,0,TAU); ctx.fill();
+        ctx.fillStyle='rgba(255,255,255,0.8)';
+        ctx.beginPath(); ctx.arc(eyeX+eyeR*0.2,eyeY-eyeR*0.25,eyeR*0.25,0,TAU); ctx.fill();
+      } else {
+        ctx.strokeStyle='#1A1A2E'; ctx.lineWidth=1.5;
+        ctx.beginPath(); ctx.moveTo(eyeX-eyeR,eyeY); ctx.lineTo(eyeX+eyeR,eyeY); ctx.stroke();
+      }
+
+      // 입
+      const mx2 = sz*(bw+0.05);
+      const my2 = sz*0.04;
+      if(this.mouthOpen>0){
+        ctx.fillStyle='#2A1A3A';
+        ctx.beginPath(); ctx.arc(mx2,my2,sz*0.035,0,TAU); ctx.fill();
+      } else {
+        ctx.strokeStyle='rgba(0,0,0,0.2)'; ctx.lineWidth=0.8;
+        ctx.beginPath(); ctx.moveTo(mx2-sz*0.02,my2);
+        ctx.quadraticCurveTo(mx2,my2+sz*0.02,mx2+sz*0.015,my2);
+        ctx.stroke();
+      }
+    } // if(!isJellyfish) 끝
   }
 }
 
@@ -1045,6 +1306,48 @@ function dropFood(x, y) {
   socket.emit('feed', { x, y, ownerName: myName });
 }
 
+function spawnRandomFish() {
+  // 해파리 제외한 종에서 랜덤 선택
+  const fishSpecies = SPECIES.filter(s => !s.isJellyfish);
+  const si = SPECIES.indexOf(pick(fishSpecies));
+  const sp = SPECIES[si];
+  const sr = sp.sizeRange;
+  const lifespan = rand(15, 30);
+  socket.emit('addFish', {
+    ownerName: myName || '익명',
+    name: sp.name,
+    speciesIdx: si,
+    customColors: sp.defaultColors,
+    size: rand(sr[0], sr[1]),
+    x: rand(100, W - 100),
+    y: rand(120, H - 200),
+    dir: Math.random() > 0.5 ? 1 : -1,
+    temporary: true,
+    lifespan: lifespan
+  });
+}
+
+function spawnRandomJellyfish() {
+  const jellyIdx = SPECIES.findIndex(s => s.isJellyfish);
+  const sp = SPECIES[jellyIdx];
+  const sr = sp.sizeRange;
+  const lifespan = rand(20, 40);
+  // 랜덤 해파리 색상
+  const palette = pick(sp.jellyPalettes);
+  socket.emit('addFish', {
+    ownerName: myName || '익명',
+    name: '해파리',
+    speciesIdx: jellyIdx,
+    customColors: palette,
+    size: rand(sr[0], sr[1]),
+    x: rand(100, W - 100),
+    y: rand(H * 0.3, H * 0.7),
+    dir: 1,
+    temporary: true,
+    lifespan: lifespan
+  });
+}
+
 function checkFishHover() {
   for(const f of fishes){
     const d = dist(f.x, f.y, mx, my);
@@ -1058,6 +1361,8 @@ function checkFishHover() {
 addEventListener('keydown', e => {
   if(e.target.tagName === 'INPUT') return;
   if(e.key === 'f' || e.key === 'F') dropFood(mx, my);
+  if(e.key === 'a' || e.key === 'A') spawnRandomFish();
+  if(e.key === 'j' || e.key === 'J') spawnRandomJellyfish();
   if(e.key === 'b' || e.key === 'B') bubbleMode = !bubbleMode;
   if(e.key === 'n' || e.key === 'N') nightMode = !nightMode;
 });
@@ -1137,6 +1442,10 @@ function animate(now) {
 
   // 물고기
   for(const f of fishes){ f.update(dt); }
+  // 죽은 임시 물고기 제거
+  for(let i = fishes.length - 1; i >= 0; i--) {
+    if(fishes[i].dead && fishes[i].deathBubbles.length === 0) fishes.splice(i, 1);
+  }
   // z 기반 정렬
   fishes.sort((a,b) => a.z - b.z);
   for(const f of fishes){ f.draw(); }
@@ -1344,7 +1653,8 @@ function updatePreview() {
   pCtx.translate(pw/2, ph/2);
   pCtx.globalAlpha = 0.95;
   const sp = SPECIES[selectedSpecies];
-  const sz = 40;
+  const sizeVal = parseInt(document.getElementById('input-size').value);
+  const sz = 20 + (sizeVal / 100) * 35;
   const colors = getCustomColors();
   const t = time;
   const tw = Math.sin(t*4)*0.3;
@@ -1371,6 +1681,10 @@ setInterval(updatePreview, 50);
 // 색상 변경 시 프리뷰 업데이트
 document.querySelectorAll('.color-pick input').forEach(el => {
   el.addEventListener('input', updatePreview);
+});
+document.getElementById('input-size').addEventListener('input', (e) => {
+  document.getElementById('size-value').textContent = e.target.value;
+  updatePreview();
 });
 
 // 버튼 이벤트
@@ -1399,11 +1713,18 @@ document.getElementById('btn-submit').addEventListener('click', () => {
   myName = ownerName;
   localStorage.setItem('aquarium-name', myName);
 
+  // 슬라이더 값(0~100)을 종의 sizeRange에 매핑
+  const sp = SPECIES[selectedSpecies];
+  const sr = sp.sizeRange;
+  const sizeVal = parseInt(document.getElementById('input-size').value);
+  const fishSize = sr[0] + (sr[1] - sr[0]) * (sizeVal / 100);
+
   socket.emit('addFish', {
     ownerName,
     name: fishName,
     speciesIdx: selectedSpecies,
     customColors: getCustomColors(),
+    size: fishSize,
     x: rand(100, W-100),
     y: rand(120, H-200),
     dir: Math.random()>0.5?1:-1
@@ -1415,6 +1736,8 @@ document.getElementById('btn-submit').addEventListener('click', () => {
 });
 
 document.getElementById('btn-feed').addEventListener('click', () => dropFood(W/2+rand(-100,100), 80));
+document.getElementById('btn-random').addEventListener('click', () => spawnRandomFish());
+document.getElementById('btn-jelly').addEventListener('click', () => spawnRandomJellyfish());
 document.getElementById('btn-bubble').addEventListener('click', () => {
   bubbleMode = !bubbleMode;
   document.getElementById('btn-bubble').classList.toggle('active', bubbleMode);
