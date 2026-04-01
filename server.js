@@ -31,6 +31,7 @@ io.on('connection', (socket) => {
       speciesIdx: data.speciesIdx,
       customColors: data.customColors,
       size: data.size,
+      z: data.z,
       x: data.x,
       y: data.y,
       dir: data.dir || 1,

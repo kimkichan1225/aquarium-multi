@@ -883,7 +883,7 @@ class Fish {
     this.y = data.y || rand(120, H-200);
     this.palette = data.customColors || this.species.defaultColors;
     const sr = this.species.sizeRange;
-    this.size = data.size || rand(sr[0], sr[1]);
+    this.size = (data.size != null) ? data.size : rand(sr[0], sr[1]);
     this.speed = this.isJellyfish ? rand(0.15, 0.4) : rand(0.4, 1.2);
     this.dir = data.dir || (Math.random()>0.5?1:-1);
     this.vx = this.isJellyfish ? 0 : this.speed*this.dir;
@@ -900,7 +900,7 @@ class Fish {
     this.finPhase = rand(0,TAU);
     this.chasingFood = null;
     this.wanderAngle = rand(0,TAU);
-    this.z = rand(0.6,1.2);
+    this.z = (data.z != null) ? data.z : rand(0.6,1.2);
     this.actualSize = this.size*this.z;
     this.opacity = this.isJellyfish ? (0.3 + this.z * 0.35) : (0.5+this.z*0.4);
     this.mouthOpen = 0;
@@ -1319,6 +1319,7 @@ function spawnRandomFish() {
     speciesIdx: si,
     customColors: sp.defaultColors,
     size: rand(sr[0], sr[1]),
+    z: rand(0.6, 1.2),
     x: rand(100, W - 100),
     y: rand(120, H - 200),
     dir: Math.random() > 0.5 ? 1 : -1,
@@ -1340,6 +1341,7 @@ function spawnRandomJellyfish() {
     speciesIdx: jellyIdx,
     customColors: palette,
     size: rand(sr[0], sr[1]),
+    z: rand(0.5, 1.2),
     x: rand(100, W - 100),
     y: rand(H * 0.3, H * 0.7),
     dir: 1,
@@ -1725,6 +1727,7 @@ document.getElementById('btn-submit').addEventListener('click', () => {
     speciesIdx: selectedSpecies,
     customColors: getCustomColors(),
     size: fishSize,
+    z: 1.0,
     x: rand(100, W-100),
     y: rand(120, H-200),
     dir: Math.random()>0.5?1:-1
@@ -1755,17 +1758,23 @@ document.getElementById('btn-my-fish').addEventListener('click', () => {
 
 function updateMyFishList() {
   const list = document.getElementById('my-fish-list');
-  const myFish = fishes.filter(f => f.ownerId === socket.id);
+  const myFish = fishes.filter(f => f.ownerId === socket.id && !f.temporary);
   list.innerHTML = '';
   if(myFish.length === 0){
     list.innerHTML = '<div style="color:rgba(140,200,255,0.3);font-size:11px;text-align:center;padding:20px">아직 물고기가 없습니다</div>';
     return;
   }
   for(const f of myFish){
+    const sizePercent = Math.round(((f.size - f.species.sizeRange[0]) / (f.species.sizeRange[1] - f.species.sizeRange[0])) * 100);
     const item = document.createElement('div');
     item.className = 'my-fish-item';
     item.innerHTML = `
-      <span class="fname">${f.fishName}</span>
+      <div style="flex:1;min-width:0">
+        <div class="fname">${f.fishName}</div>
+        <div style="color:rgba(140,200,255,0.35);font-size:9px;margin-top:2px">
+          ${f.species.name} · 크기 ${sizePercent}%
+        </div>
+      </div>
       <button class="remove-btn" data-id="${f.id}">회수</button>
     `;
     item.querySelector('.remove-btn').addEventListener('click', () => {
