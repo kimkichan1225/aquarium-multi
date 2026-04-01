@@ -1149,10 +1149,10 @@ function animate(now) {
   }
 
   // 다른 유저 커서 그리기
-  const now = Date.now();
+  const cursorNow = Date.now();
   for(const [id, c] of remoteCursors) {
     // 5초 이상 업데이트 없으면 제거
-    if(now - c.lastSeen > 5000) { remoteCursors.delete(id); continue; }
+    if(cursorNow - c.lastSeen > 5000) { remoteCursors.delete(id); continue; }
     // 부드럽게 보간
     c.x = lerp(c.x, c.targetX, 0.15);
     c.y = lerp(c.y, c.targetY, 0.15);
