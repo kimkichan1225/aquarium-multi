@@ -238,10 +238,18 @@
     margin-bottom:12px;
   }
   .my-fish-item{
-    display:flex;align-items:center;justify-content:space-between;
+    display:flex;align-items:center;gap:8px;
     padding:8px 10px;background:rgba(20,40,70,0.3);
     border:1px solid rgba(100,180,255,0.08);border-radius:10px;
     margin-bottom:6px;
+  }
+  .my-fish-item .fish-thumb{
+    flex-shrink:0;width:60px;height:44px;
+    background:rgba(5,15,35,0.5);border-radius:8px;
+    border:1px solid rgba(100,180,255,0.08);display:block;
+  }
+  .my-fish-item .fish-info{
+    flex:1;min-width:0;
   }
   .my-fish-item .fname{
     color:rgba(180,220,255,0.7);font-size:11px;
@@ -249,7 +257,7 @@
   .my-fish-item .remove-btn{
     background:rgba(255,80,80,0.15);border:1px solid rgba(255,80,80,0.2);
     border-radius:6px;color:rgba(255,120,120,0.7);font-size:10px;
-    padding:3px 8px;cursor:pointer;
+    padding:3px 8px;cursor:pointer;flex-shrink:0;
   }
   .my-fish-item .remove-btn:hover{background:rgba(255,80,80,0.3)}
 
@@ -1145,8 +1153,14 @@ class Fish {
       const margin=80;
       if(this.x<margin)this.targetVx=Math.abs(this.targetVx);
       if(this.x>W-margin)this.targetVx=-Math.abs(this.targetVx);
-      if(this.y<margin)this.targetVy=Math.abs(this.targetVy)*0.5;
-      if(this.y>H-140)this.targetVy=-Math.abs(this.targetVy)*0.5;
+      if(this.y<margin){
+        const push=0.3+(margin-this.y)/margin*0.5;
+        this.targetVy=Math.max(this.targetVy,push);
+      }
+      if(this.y>H-140){
+        const push=0.3+(this.y-(H-140))/140*0.5;
+        this.targetVy=Math.min(this.targetVy,-push);
+      }
 
       // 마우스 회피
       const curDist=dist(this.x,this.y,mx,my);
@@ -1157,8 +1171,9 @@ class Fish {
         this.targetVy+=Math.sin(angle)*flee*0.3;
         this.tailSpeed=8;
       } else { this.tailSpeed=lerp(this.tailSpeed,rand(3,6),0.02); }
+      const nearEdge=(this.y<margin||this.y>H-140)?0.08:0.03;
       this.vx=lerp(this.vx,this.targetVx,0.03*s);
-      this.vy=lerp(this.vy,this.targetVy,0.03*s);
+      this.vy=lerp(this.vy,this.targetVy,nearEdge*s);
       this.x+=this.vx*s; this.y+=this.vy*s;
       this.x=clamp(this.x,20,W-20); this.y=clamp(this.y,20,H-80);
       if(Math.abs(this.vx)>0.05)this.dir=this.vx>0?1:-1;
@@ -2103,19 +2118,61 @@ function updateMyFishList() {
     const sizePercent = Math.round(((f.size - f.species.sizeRange[0]) / (f.species.sizeRange[1] - f.species.sizeRange[0])) * 100);
     const item = document.createElement('div');
     item.className = 'my-fish-item';
-    item.innerHTML = `
-      <div style="flex:1;min-width:0">
-        <div class="fname">${f.fishName}</div>
-        <div style="color:rgba(140,200,255,0.35);font-size:9px;margin-top:2px">
-          ${f.species.name} · 크기 ${sizePercent}%
-        </div>
+
+    // 썸네일 canvas
+    const thumb = document.createElement('canvas');
+    thumb.className = 'fish-thumb';
+    thumb.width = 120;
+    thumb.height = 88;
+
+    const info = document.createElement('div');
+    info.className = 'fish-info';
+    info.innerHTML = `
+      <div class="fname">${f.fishName}</div>
+      <div style="color:rgba(140,200,255,0.35);font-size:9px;margin-top:2px">
+        ${f.species.name} · 크기 ${sizePercent}%
       </div>
-      <button class="remove-btn" data-id="${f.id}">회수</button>
     `;
-    item.querySelector('.remove-btn').addEventListener('click', () => {
+
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'remove-btn';
+    removeBtn.textContent = '회수';
+    removeBtn.addEventListener('click', () => {
       socket.emit('removeFish', { fishId: f.id, uid: myUid });
     });
+
+    item.appendChild(thumb);
+    item.appendChild(info);
+    item.appendChild(removeBtn);
     list.appendChild(item);
+
+    // 썸네일 그리기
+    const tc = thumb.getContext('2d');
+    const tw = thumb.width, th = thumb.height;
+    const sz = Math.min(tw, th) * 0.32;
+    tc.save();
+    tc.translate(tw / 2, th / 2);
+    // 해파리가 아니면 오른쪽을 바라보게
+    if(!f.species.isJellyfish) tc.scale(1, 1);
+    f.species.draw(tc, sz, f.palette, 0, 0, 0);
+    if(!f.species.isJellyfish) {
+      // 광택
+      const shG = tc.createRadialGradient(sz*0.1,-sz*0.1,0,sz*0.1,-sz*0.1,sz*0.25);
+      shG.addColorStop(0,'rgba(255,255,255,0.25)');
+      shG.addColorStop(1,'rgba(255,255,255,0)');
+      tc.fillStyle=shG;
+      tc.beginPath(); tc.ellipse(sz*0.1,-sz*0.08,sz*0.2,sz*0.12,-0.2,0,Math.PI*2); tc.fill();
+      // 눈
+      const bw = f.species.bodyW||0.5;
+      const eyeX=sz*(bw-0.1), eyeY=-sz*0.06, eyeR=sz*0.07;
+      tc.fillStyle='#FAFAFA';
+      tc.beginPath(); tc.ellipse(eyeX,eyeY,eyeR,eyeR*0.95,0,0,Math.PI*2); tc.fill();
+      tc.fillStyle='#1A1A2E';
+      tc.beginPath(); tc.arc(eyeX+1,eyeY,eyeR*0.55,0,Math.PI*2); tc.fill();
+      tc.fillStyle='rgba(255,255,255,0.8)';
+      tc.beginPath(); tc.arc(eyeX+eyeR*0.2,eyeY-eyeR*0.25,eyeR*0.25,0,Math.PI*2); tc.fill();
+    }
+    tc.restore();
   }
 }
 
