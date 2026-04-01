@@ -1375,6 +1375,7 @@ function spawnRandomFish() {
   const sr = sp.sizeRange;
   const lifespan = rand(15, 30);
   socket.emit('addFish', {
+    uid: myUid,
     ownerName: myName || '익명',
     name: sp.name,
     speciesIdx: si,
@@ -1397,6 +1398,7 @@ function spawnRandomJellyfish() {
   // 랜덤 해파리 색상
   const palette = pick(sp.jellyPalettes);
   socket.emit('addFish', {
+    uid: myUid,
     ownerName: myName || '익명',
     name: '해파리',
     speciesIdx: jellyIdx,
@@ -1612,9 +1614,16 @@ requestAnimationFrame(animate);
 // ── 소켓 이벤트 ──
 // ══════════════════════
 let myName = localStorage.getItem('aquarium-name') || '';
+// 고유 사용자 ID (재접속해도 유지)
+let myUid = localStorage.getItem('aquarium-uid');
+if(!myUid) {
+  myUid = 'u_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+  localStorage.setItem('aquarium-uid', myUid);
+}
 
 socket.on('connect', () => {
   document.getElementById('online-count').textContent = '1';
+  socket.emit('register', myUid);
 });
 
 socket.on('onlineCount', (count) => {
@@ -1655,7 +1664,7 @@ socket.on('fishAdded', (data) => {
   fish.nameTimer = 4;
   fish.showName = true;
   fishes.push(fish);
-  if(data.ownerId !== socket.id) {
+  if(data.ownerId !== myUid) {
     showToast(`${data.ownerName}님이 "${data.name}" 을(를) 수조에 넣었습니다!`);
   }
   updateMyFishList();
@@ -1818,6 +1827,7 @@ document.getElementById('btn-submit').addEventListener('click', () => {
   const fishSize = sr[0] + (sr[1] - sr[0]) * (sizeVal / 100);
 
   socket.emit('addFish', {
+    uid: myUid,
     ownerName,
     name: fishName,
     speciesIdx: selectedSpecies,
@@ -1859,7 +1869,7 @@ document.getElementById('btn-my-fish').addEventListener('click', () => {
 
 function updateMyFishList() {
   const list = document.getElementById('my-fish-list');
-  const myFish = fishes.filter(f => f.ownerId === socket.id && !f.temporary);
+  const myFish = fishes.filter(f => f.ownerId === myUid && !f.temporary);
   list.innerHTML = '';
   if(myFish.length === 0){
     list.innerHTML = '<div style="color:rgba(140,200,255,0.3);font-size:11px;text-align:center;padding:20px">아직 물고기가 없습니다</div>';
@@ -1879,7 +1889,7 @@ function updateMyFishList() {
       <button class="remove-btn" data-id="${f.id}">회수</button>
     `;
     item.querySelector('.remove-btn').addEventListener('click', () => {
-      socket.emit('removeFish', f.id);
+      socket.emit('removeFish', { fishId: f.id, uid: myUid });
     });
     list.appendChild(item);
   }

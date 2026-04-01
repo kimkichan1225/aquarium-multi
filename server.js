@@ -9,8 +9,9 @@ const io = new Server(server);
 app.use(express.static('public'));
 
 // 공유 수조 상태
-const fishes = new Map(); // odwnerId -> { fish data }
+const fishes = new Map();
 let nextFishId = 1;
+const socketUidMap = new Map(); // socket.id -> uid
 
 io.on('connection', (socket) => {
   console.log(`접속: ${socket.id}`);
@@ -18,14 +19,20 @@ io.on('connection', (socket) => {
   // 접속자 수 브로드캐스트
   io.emit('onlineCount', io.engine.clientsCount);
 
+  // 클라이언트 고유 ID 등록
+  socket.on('register', (uid) => {
+    socketUidMap.set(socket.id, uid);
+  });
+
   // 기존 물고기 목록 전송
   socket.emit('init', Array.from(fishes.values()));
 
   // 물고기 추가
   socket.on('addFish', (data) => {
+    const uid = data.uid || socketUidMap.get(socket.id) || socket.id;
     const fish = {
       id: nextFishId++,
-      ownerId: socket.id,
+      ownerId: uid,
       ownerName: data.ownerName || '익명',
       name: data.name || '이름없는 물고기',
       speciesIdx: data.speciesIdx,
@@ -53,9 +60,11 @@ io.on('connection', (socket) => {
   });
 
   // 물고기 제거 (자기 물고기만)
-  socket.on('removeFish', (fishId) => {
+  socket.on('removeFish', (data) => {
+    const fishId = typeof data === 'object' ? data.fishId : data;
+    const uid = (typeof data === 'object' ? data.uid : null) || socketUidMap.get(socket.id) || socket.id;
     const fish = fishes.get(fishId);
-    if (fish && fish.ownerId === socket.id) {
+    if (fish && fish.ownerId === uid) {
       fishes.delete(fishId);
       io.emit('fishRemoved', fishId);
     }
