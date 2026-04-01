@@ -7,7 +7,7 @@
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
   body{overflow:hidden;background:#020810;font-family:'Segoe UI',system-ui,sans-serif;user-select:none}
-  canvas{display:block;position:fixed;top:0;left:0}
+  #c{display:block;position:fixed;top:0;left:0}
 
   /* 상단 바 */
   #top-bar{
@@ -1020,8 +1020,18 @@ setInterval(() => {
 // ══════════════════════
 // ── 마우스 & 입력 ──
 // ══════════════════════
-addEventListener('mousemove', e => { mx=e.clientX; my=e.clientY; checkFishHover(); });
-addEventListener('touchmove', e => { mx=e.touches[0].clientX; my=e.touches[0].clientY; });
+// 커서 전송 쓰로틀 (50ms)
+let lastCursorSend = 0;
+function sendCursor(x, y) {
+  const now = Date.now();
+  if(now - lastCursorSend > 50) {
+    socket.emit('cursor', { x: x/W, y: y/H, name: myName || '익명' });
+    lastCursorSend = now;
+  }
+}
+
+addEventListener('mousemove', e => { mx=e.clientX; my=e.clientY; checkFishHover(); sendCursor(mx,my); });
+addEventListener('touchmove', e => { mx=e.touches[0].clientX; my=e.touches[0].clientY; sendCursor(mx,my); });
 
 addEventListener('click', e => {
   // UI 영역 클릭 무시
@@ -1138,6 +1148,38 @@ function animate(now) {
     else bubbles[i].draw();
   }
 
+  // 다른 유저 커서 그리기
+  const now = Date.now();
+  for(const [id, c] of remoteCursors) {
+    // 5초 이상 업데이트 없으면 제거
+    if(now - c.lastSeen > 5000) { remoteCursors.delete(id); continue; }
+    // 부드럽게 보간
+    c.x = lerp(c.x, c.targetX, 0.15);
+    c.y = lerp(c.y, c.targetY, 0.15);
+    // 리사이즈 대응
+    c.targetX = c.targetX; // 비율은 이벤트에서 갱신됨
+
+    ctx.save();
+    ctx.globalAlpha = 0.7;
+    // 물방울 커서
+    const pulse = 1 + Math.sin(time * 3 + id.charCodeAt(0)) * 0.15;
+    const r = 8 * pulse;
+    const grd = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, r);
+    grd.addColorStop(0, 'rgba(100,220,255,0.5)');
+    grd.addColorStop(0.6, 'rgba(80,180,255,0.25)');
+    grd.addColorStop(1, 'rgba(60,140,255,0)');
+    ctx.fillStyle = grd;
+    ctx.beginPath(); ctx.arc(c.x, c.y, r, 0, TAU); ctx.fill();
+    // 중심 점
+    ctx.fillStyle = 'rgba(150,230,255,0.8)';
+    ctx.beginPath(); ctx.arc(c.x, c.y, 2.5, 0, TAU); ctx.fill();
+    // 닉네임
+    ctx.font = '10px system-ui';
+    ctx.fillStyle = 'rgba(140,210,255,0.7)';
+    ctx.fillText(c.name, c.x + 12, c.y + 4);
+    ctx.restore();
+  }
+
   // 수면 효과
   ctx.save();
   ctx.globalAlpha = nightMode ? 0.02 : 0.05;
@@ -1170,6 +1212,23 @@ socket.on('connect', () => {
 
 socket.on('onlineCount', (count) => {
   document.getElementById('online-count').textContent = count;
+});
+
+// 다른 유저 커서
+const remoteCursors = new Map();
+socket.on('cursorMoved', (data) => {
+  let cursor = remoteCursors.get(data.id);
+  if(!cursor) {
+    cursor = { x: data.x*W, y: data.y*H, targetX: data.x*W, targetY: data.y*H, name: data.name, lastSeen: Date.now() };
+    remoteCursors.set(data.id, cursor);
+  }
+  cursor.targetX = data.x * W;
+  cursor.targetY = data.y * H;
+  cursor.name = data.name;
+  cursor.lastSeen = Date.now();
+});
+socket.on('cursorLeft', (id) => {
+  remoteCursors.delete(id);
 });
 
 socket.on('init', (fishList) => {

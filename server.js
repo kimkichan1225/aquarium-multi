@@ -49,15 +49,26 @@ io.on('connection', (socket) => {
     }
   });
 
+  // 마우스 커서 공유
+  socket.on('cursor', (data) => {
+    socket.broadcast.emit('cursorMoved', {
+      id: socket.id,
+      x: data.x,
+      y: data.y,
+      name: data.name
+    });
+  });
+
   // 먹이주기
   socket.on('feed', (data) => {
     io.emit('foodDropped', { x: data.x, y: data.y, by: data.ownerName });
   });
 
-  // 접속 해제 시 물고기 유지 (수조에 남겨둠)
+  // 접속 해제 시 물고기 유지 (수조에 남겨둠), 커서 제거
   socket.on('disconnect', () => {
     console.log(`퇴장: ${socket.id}`);
     io.emit('onlineCount', io.engine.clientsCount);
+    io.emit('cursorLeft', socket.id);
   });
 });
 
