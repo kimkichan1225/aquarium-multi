@@ -181,6 +181,11 @@ io.on('connection', (socket) => {
     }
   });
 
+  // 물고기 위치 동기화
+  socket.on('fishPositions', (updates) => {
+    socket.broadcast.emit('fishPositions', updates);
+  });
+
   // 마우스 커서 공유
   socket.on('cursor', (data) => {
     socket.broadcast.emit('cursorMoved', {

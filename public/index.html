@@ -1107,6 +1107,13 @@ class Fish {
       if(this.dyingProgress >= 1) this.dead = true;
     }
 
+    // 다른 유저 소유 물고기는 수신 위치로 lerp (AI 비활성)
+    if(this.ownerId !== myUid && this.remoteX != null) {
+      this.x = lerp(this.x, this.remoteX, 0.12 * s);
+      this.y = lerp(this.y, this.remoteY, 0.12 * s);
+      return;
+    }
+
     if(this.isJellyfish) {
       // 해파리 전용 움직임
       this.pulsePhase += this.pulseSpeed * dt;
@@ -1878,6 +1885,18 @@ socket.on('fishAdded', (data) => {
   updateMyFishList();
 });
 
+// 다른 클라이언트에서 보낸 물고기 위치 수신
+socket.on('fishPositions', (updates) => {
+  for(const u of updates) {
+    const fish = fishes.find(f => f.id === u.id);
+    if(fish && fish.ownerId !== myUid) {
+      fish.remoteX = u.x;
+      fish.remoteY = u.y;
+      fish.dir = u.dir;
+    }
+  }
+});
+
 socket.on('fishRemoved', (fishId) => {
   const fish = fishes.find(f => f.id === fishId);
   if(!fish) return;
@@ -2172,6 +2191,13 @@ function updateMyFishList() {
     tc.restore();
   }
 }
+
+// 내 물고기 위치 주기적 전송 (150ms)
+setInterval(() => {
+  const myFish = fishes.filter(f => f.ownerId === myUid && !f.dying && !f.dead);
+  if(myFish.length === 0) return;
+  socket.emit('fishPositions', myFish.map(f => ({ id: f.id, x: f.x, y: f.y, dir: f.dir })));
+}, 150);
 
 // 토스트 알림
 function showToast(msg) {
