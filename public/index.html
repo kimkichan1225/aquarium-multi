@@ -1051,8 +1051,9 @@ class Fish {
     this.ownerId = data.ownerId;
     this.ownerName = data.ownerName || '익명';
     this.fishName = data.name || '이름없음';
-    this.x = data.x || rand(100, W-100);
-    this.y = data.y || rand(120, H-200);
+    this.x = (data.rx != null ? data.rx * W : null) ?? data.x ?? rand(100, W-100);
+    this.y = (data.ry != null ? data.ry * H : null) ?? data.y ?? rand(120, H-200);
+    if(data.rx != null) { this.remoteX = data.rx * W; this.remoteY = data.ry * H; }
     this.palette = data.customColors || this.species.defaultColors;
     const sr = this.species.sizeRange;
     this.size = (data.size != null) ? data.size : rand(sr[0], sr[1]);

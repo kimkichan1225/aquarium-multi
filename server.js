@@ -110,8 +110,12 @@ io.on('connection', (socket) => {
     socketUidMap.set(socket.id, uid);
   });
 
-  // 기존 물고기 목록 전송
-  socket.emit('init', Array.from(fishes.values()));
+  // 기존 물고기 목록 전송 (최신 위치 포함)
+  const fishList = Array.from(fishes.values()).map(f => ({
+    ...f,
+    ...(f.rx != null ? { rx: f.rx, ry: f.ry } : {})
+  }));
+  socket.emit('init', fishList);
 
   // 물고기 추가
   socket.on('addFish', async (data) => {
@@ -183,6 +187,10 @@ io.on('connection', (socket) => {
 
   // 물고기 위치 동기화
   socket.on('fishPositions', (updates) => {
+    for(const u of updates) {
+      const fish = fishes.get(u.id);
+      if(fish) { fish.rx = u.x; fish.ry = u.y; fish.dir = u.dir; }
+    }
     socket.broadcast.emit('fishPositions', updates);
   });
 
