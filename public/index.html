@@ -154,7 +154,53 @@
     padding:2px;
   }
 
-  /* 미리보기 - #preview-side로 이동 */
+  /* 로그인 모달 */
+  #login-overlay{
+    position:fixed;inset:0;background:rgba(2,8,16,0.85);
+    backdrop-filter:blur(10px);z-index:500;
+    display:flex;align-items:center;justify-content:center;
+  }
+  #login-overlay.hidden{display:none}
+  #login-box{
+    background:rgba(10,25,50,0.95);border:1px solid rgba(100,180,255,0.15);
+    border-radius:20px;padding:32px;width:340px;max-width:90vw;text-align:center;
+  }
+  #login-box h2{
+    color:rgba(160,220,255,0.85);font-size:18px;font-weight:500;
+    letter-spacing:2px;margin-bottom:6px;
+  }
+  #login-box .subtitle{
+    color:rgba(140,200,255,0.4);font-size:11px;margin-bottom:22px;
+  }
+  #login-box input{
+    width:100%;background:rgba(20,40,70,0.6);border:1px solid rgba(100,180,255,0.12);
+    border-radius:10px;padding:10px 14px;color:rgba(200,230,255,0.9);
+    font-family:inherit;font-size:13px;outline:none;margin-bottom:10px;
+    transition:border-color 0.3s;
+  }
+  #login-box input:focus{border-color:rgba(100,180,255,0.35)}
+  #login-box .btn-row{display:flex;gap:8px;margin-top:14px}
+  #login-box .btn-row .btn{flex:1}
+  #login-msg{
+    color:rgba(255,120,120,0.8);font-size:11px;min-height:16px;margin-top:8px;
+  }
+  #login-msg.success{color:rgba(120,255,160,0.8)}
+  #login-skip{
+    color:rgba(140,200,255,0.3);font-size:10px;margin-top:14px;
+    cursor:pointer;transition:color 0.3s;
+  }
+  #login-skip:hover{color:rgba(140,200,255,0.6)}
+  #user-info{
+    display:flex;align-items:center;gap:8px;
+  }
+  #user-nickname{
+    color:rgba(120,220,170,0.8);font-size:11px;letter-spacing:0.5px;
+  }
+  #btn-logout{
+    background:none;border:1px solid rgba(255,120,120,0.2);border-radius:6px;
+    color:rgba(255,140,140,0.5);font-size:9px;padding:3px 8px;cursor:pointer;
+  }
+  #btn-logout:hover{color:rgba(255,140,140,0.8);border-color:rgba(255,120,120,0.4)}
 
   /* 내 물고기 목록 */
   #my-fish-panel{
@@ -203,11 +249,33 @@
 <body>
 
 <!-- 상단 바 -->
+<!-- 로그인 오버레이 -->
+<div id="login-overlay">
+  <div id="login-box">
+    <h2>MULTI AQUARIUM</h2>
+    <div class="subtitle">나만의 물고기를 만들어 공유 수조에 넣자</div>
+    <input type="text" id="login-nick" placeholder="닉네임" maxlength="20">
+    <input type="password" id="login-pw" placeholder="비밀번호 (4~8자리 숫자)" maxlength="8" inputmode="numeric">
+    <div class="btn-row">
+      <button class="btn" id="btn-register">회원가입</button>
+      <button class="btn primary" id="btn-login">로그인</button>
+    </div>
+    <div id="login-msg"></div>
+    <div id="login-skip">비회원으로 구경하기</div>
+  </div>
+</div>
+
 <div id="top-bar">
   <h1>MULTI AQUARIUM</h1>
-  <div class="info">
-    <span id="online-count">0</span> 접속 &nbsp;│&nbsp;
-    <span id="fish-total">0</span> 마리
+  <div style="display:flex;align-items:center;gap:14px">
+    <div class="info">
+      <span id="online-count">0</span> 접속 &nbsp;│&nbsp;
+      <span id="fish-total">0</span> 마리
+    </div>
+    <div id="user-info" style="display:none">
+      <span id="user-nickname"></span>
+      <button id="btn-logout">로그아웃</button>
+    </div>
   </div>
 </div>
 
@@ -990,27 +1058,10 @@ class Fish {
     if(this.nameTimer>0) this.nameTimer -= dt;
     else this.showName = false;
 
-    // 임시 물고기 수명 처리
-    if(this.temporary) {
-      this.age += dt;
-      if(this.age >= this.lifespan && !this.dying) {
-        this.dying = true;
-        // 거품 파티클 생성
-        for(let i = 0; i < 12; i++) {
-          this.deathBubbles.push({
-            x: this.x + rand(-this.actualSize, this.actualSize) * 0.5,
-            y: this.y + rand(-this.actualSize, this.actualSize) * 0.5,
-            size: rand(2, 6),
-            vy: rand(-0.5, -1.5),
-            vx: rand(-0.3, 0.3),
-            opacity: rand(0.5, 0.9)
-          });
-        }
-      }
-      if(this.dying) {
-        this.dyingProgress += dt * 0.7; // ~1.4초에 걸쳐 사라짐
-        if(this.dyingProgress >= 1) this.dead = true;
-      }
+    // 거품 사라짐 진행 (dying은 서버 fishRemoved에서 시작됨)
+    if(this.dying) {
+      this.dyingProgress += dt * 0.5; // ~2초에 걸쳐 사라짐
+      if(this.dyingProgress >= 1) this.dead = true;
     }
 
     if(this.isJellyfish) {
@@ -1614,12 +1665,89 @@ requestAnimationFrame(animate);
 // ── 소켓 이벤트 ──
 // ══════════════════════
 let myName = localStorage.getItem('aquarium-name') || '';
+let loggedIn = false;
+let loggedNickname = localStorage.getItem('aquarium-login') || '';
+
 // 고유 사용자 ID (재접속해도 유지)
 let myUid = localStorage.getItem('aquarium-uid');
 if(!myUid) {
   myUid = 'u_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
   localStorage.setItem('aquarium-uid', myUid);
 }
+
+// ── 로그인/회원가입 ──
+const loginOverlay = document.getElementById('login-overlay');
+const loginMsg = document.getElementById('login-msg');
+
+// 이미 로그인 세션이 있으면 바로 진입
+if(loggedNickname) {
+  loggedIn = true;
+  myName = loggedNickname;
+  myUid = loggedNickname; // 로그인 유저는 닉네임이 uid
+  loginOverlay.classList.add('hidden');
+  document.getElementById('user-info').style.display = 'flex';
+  document.getElementById('user-nickname').textContent = loggedNickname;
+}
+
+document.getElementById('btn-login').addEventListener('click', async () => {
+  const nick = document.getElementById('login-nick').value.trim();
+  const pw = document.getElementById('login-pw').value.trim();
+  loginMsg.className = ''; loginMsg.textContent = '';
+  const res = await fetch('/api/login', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ nickname: nick, password: pw })
+  });
+  const data = await res.json();
+  if(data.ok) {
+    loggedIn = true;
+    loggedNickname = data.nickname;
+    myName = data.nickname;
+    myUid = data.nickname;
+    localStorage.setItem('aquarium-login', data.nickname);
+    localStorage.setItem('aquarium-name', data.nickname);
+    loginOverlay.classList.add('hidden');
+    document.getElementById('user-info').style.display = 'flex';
+    document.getElementById('user-nickname').textContent = data.nickname;
+    socket.emit('register', myUid);
+  } else {
+    loginMsg.textContent = data.msg;
+  }
+});
+
+document.getElementById('btn-register').addEventListener('click', async () => {
+  const nick = document.getElementById('login-nick').value.trim();
+  const pw = document.getElementById('login-pw').value.trim();
+  loginMsg.className = ''; loginMsg.textContent = '';
+  const res = await fetch('/api/register', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ nickname: nick, password: pw })
+  });
+  const data = await res.json();
+  if(data.ok) {
+    loginMsg.className = 'success';
+    loginMsg.textContent = '가입 완료! 로그인하세요';
+  } else {
+    loginMsg.textContent = data.msg;
+  }
+});
+
+document.getElementById('login-skip').addEventListener('click', () => {
+  loginOverlay.classList.add('hidden');
+});
+
+// 엔터키로 로그인
+document.getElementById('login-pw').addEventListener('keydown', (e) => {
+  if(e.key === 'Enter') document.getElementById('btn-login').click();
+});
+
+document.getElementById('btn-logout').addEventListener('click', () => {
+  loggedIn = false;
+  loggedNickname = '';
+  localStorage.removeItem('aquarium-login');
+  document.getElementById('user-info').style.display = 'none';
+  myName = '';
+  myUid = localStorage.getItem('aquarium-uid');
+});
 
 socket.on('connect', () => {
   document.getElementById('online-count').textContent = '1';
@@ -1671,8 +1799,26 @@ socket.on('fishAdded', (data) => {
 });
 
 socket.on('fishRemoved', (fishId) => {
-  const idx = fishes.findIndex(f => f.id === fishId);
-  if(idx >= 0) fishes.splice(idx, 1);
+  const fish = fishes.find(f => f.id === fishId);
+  if(!fish) return;
+  if(fish.temporary && !fish.dying) {
+    // 거품 사라짐 애니메이션 시작 (바로 제거하지 않음)
+    fish.dying = true;
+    fish.dyingProgress = 0;
+    for(let i = 0; i < 12; i++) {
+      fish.deathBubbles.push({
+        x: fish.x + rand(-fish.actualSize, fish.actualSize) * 0.5,
+        y: fish.y + rand(-fish.actualSize, fish.actualSize) * 0.5,
+        size: rand(2, 6),
+        vy: rand(-0.5, -1.5),
+        vx: rand(-0.3, 0.3),
+        opacity: rand(0.5, 0.9)
+      });
+    }
+  } else {
+    const idx = fishes.indexOf(fish);
+    if(idx >= 0) fishes.splice(idx, 1);
+  }
   updateMyFishList();
 });
 
@@ -1797,7 +1943,16 @@ document.getElementById('input-size').addEventListener('input', (e) => {
 // 버튼 이벤트
 document.getElementById('btn-create').addEventListener('click', () => {
   creatorOverlay.classList.add('open');
-  if(myName) document.getElementById('input-owner').value = myName;
+  const ownerInput = document.getElementById('input-owner');
+  if(loggedIn) {
+    ownerInput.value = loggedNickname;
+    ownerInput.readOnly = true;
+    ownerInput.style.opacity = '0.5';
+  } else {
+    if(myName) ownerInput.value = myName;
+    ownerInput.readOnly = false;
+    ownerInput.style.opacity = '1';
+  }
   // 기본 색상 세팅
   const dc = SPECIES[selectedSpecies].defaultColors;
   document.getElementById('color-body').value = dc.body.slice(0,7);
@@ -1836,7 +1991,8 @@ document.getElementById('btn-submit').addEventListener('click', () => {
     z: 1.0,
     x: rand(100, W-100),
     y: rand(120, H-200),
-    dir: Math.random()>0.5?1:-1
+    dir: Math.random()>0.5?1:-1,
+    loggedIn: loggedIn
   });
 
   creatorOverlay.classList.remove('open');

@@ -1,25 +1,108 @@
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
+const { Pool } = require('pg');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
 app.use(express.static('public'));
+app.use(express.json());
 
-// 공유 수조 상태
+// ── DB 연결 ──
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
+});
+
+// ── DB 초기화 ──
+async function initDB() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      nickname VARCHAR(20) UNIQUE NOT NULL,
+      password VARCHAR(20) NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS fish (
+      id SERIAL PRIMARY KEY,
+      owner_nickname VARCHAR(20) REFERENCES users(nickname),
+      name VARCHAR(20) NOT NULL,
+      species_idx INT NOT NULL,
+      custom_colors JSONB,
+      size FLOAT,
+      z FLOAT,
+      x FLOAT,
+      y FLOAT,
+      dir INT DEFAULT 1,
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
+  console.log('DB 테이블 준비 완료');
+}
+
+// ── REST API: 회원가입/로그인 ──
+app.post('/api/register', async (req, res) => {
+  const { nickname, password } = req.body;
+  if (!nickname || !password) return res.json({ ok: false, msg: '닉네임과 비밀번호를 입력하세요' });
+  if (nickname.length > 20) return res.json({ ok: false, msg: '닉네임은 20자 이하' });
+  if (!/^\d{4,8}$/.test(password)) return res.json({ ok: false, msg: '비밀번호는 4~8자리 숫자' });
+  try {
+    await pool.query('INSERT INTO users (nickname, password) VALUES ($1, $2)', [nickname, password]);
+    res.json({ ok: true, nickname });
+  } catch (e) {
+    if (e.code === '23505') return res.json({ ok: false, msg: '이미 사용 중인 닉네임입니다' });
+    res.json({ ok: false, msg: '서버 오류' });
+  }
+});
+
+app.post('/api/login', async (req, res) => {
+  const { nickname, password } = req.body;
+  if (!nickname || !password) return res.json({ ok: false, msg: '닉네임과 비밀번호를 입력하세요' });
+  const result = await pool.query('SELECT * FROM users WHERE nickname = $1 AND password = $2', [nickname, password]);
+  if (result.rows.length === 0) return res.json({ ok: false, msg: '닉네임 또는 비밀번호가 틀립니다' });
+  res.json({ ok: true, nickname: result.rows[0].nickname });
+});
+
+// ── 메모리 상태 ──
 const fishes = new Map();
 let nextFishId = 1;
-const socketUidMap = new Map(); // socket.id -> uid
+const socketUidMap = new Map();
 
+// DB에서 영구 물고기 로드
+async function loadFishFromDB() {
+  const result = await pool.query('SELECT * FROM fish ORDER BY id');
+  for (const row of result.rows) {
+    const fish = {
+      id: row.id,
+      dbId: row.id,
+      ownerId: row.owner_nickname,
+      ownerName: row.owner_nickname,
+      name: row.name,
+      speciesIdx: row.species_idx,
+      customColors: row.custom_colors,
+      size: row.size,
+      z: row.z,
+      x: row.x,
+      y: row.y,
+      dir: row.dir,
+      temporary: false,
+      createdAt: row.created_at
+    };
+    fishes.set(fish.id, fish);
+    if (fish.id >= nextFishId) nextFishId = fish.id + 1;
+  }
+  console.log(`DB에서 물고기 ${fishes.size}마리 로드`);
+}
+
+// ── 소켓 ──
 io.on('connection', (socket) => {
   console.log(`접속: ${socket.id}`);
-
-  // 접속자 수 브로드캐스트
   io.emit('onlineCount', io.engine.clientsCount);
 
-  // 클라이언트 고유 ID 등록
   socket.on('register', (uid) => {
     socketUidMap.set(socket.id, uid);
   });
@@ -28,7 +111,7 @@ io.on('connection', (socket) => {
   socket.emit('init', Array.from(fishes.values()));
 
   // 물고기 추가
-  socket.on('addFish', (data) => {
+  socket.on('addFish', async (data) => {
     const uid = data.uid || socketUidMap.get(socket.id) || socket.id;
     const fish = {
       id: nextFishId++,
@@ -46,11 +129,28 @@ io.on('connection', (socket) => {
       lifespan: data.lifespan || null,
       createdAt: Date.now()
     };
+
+    // 영구 물고기 (로그인 유저가 만든 비임시)는 DB 저장
+    if (!fish.temporary && data.loggedIn) {
+      try {
+        const result = await pool.query(
+          `INSERT INTO fish (owner_nickname, name, species_idx, custom_colors, size, z, x, y, dir)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
+          [data.ownerName, fish.name, fish.speciesIdx, JSON.stringify(fish.customColors),
+           fish.size, fish.z, fish.x, fish.y, fish.dir]
+        );
+        fish.id = result.rows[0].id;
+        fish.dbId = result.rows[0].id;
+        if (fish.id >= nextFishId) nextFishId = fish.id + 1;
+      } catch (e) {
+        console.error('물고기 DB 저장 실패:', e.message);
+      }
+    }
+
     fishes.set(fish.id, fish);
     io.emit('fishAdded', fish);
-    console.log(`물고기 추가: ${fish.name} by ${fish.ownerName}${fish.temporary ? ' (임시)' : ''}`);
+    console.log(`물고기 추가: ${fish.name} by ${fish.ownerName}${fish.temporary ? ' (임시)' : ''}${fish.dbId ? ' [DB]' : ''}`);
 
-    // 임시 물고기는 수명 후 서버에서도 제거
     if (fish.temporary && fish.lifespan) {
       setTimeout(() => {
         fishes.delete(fish.id);
@@ -59,12 +159,20 @@ io.on('connection', (socket) => {
     }
   });
 
-  // 물고기 제거 (자기 물고기만)
-  socket.on('removeFish', (data) => {
+  // 물고기 제거
+  socket.on('removeFish', async (data) => {
     const fishId = typeof data === 'object' ? data.fishId : data;
     const uid = (typeof data === 'object' ? data.uid : null) || socketUidMap.get(socket.id) || socket.id;
     const fish = fishes.get(fishId);
     if (fish && fish.ownerId === uid) {
+      // DB에서도 삭제
+      if (fish.dbId) {
+        try {
+          await pool.query('DELETE FROM fish WHERE id = $1', [fish.dbId]);
+        } catch (e) {
+          console.error('물고기 DB 삭제 실패:', e.message);
+        }
+      }
       fishes.delete(fishId);
       io.emit('fishRemoved', fishId);
     }
@@ -85,7 +193,6 @@ io.on('connection', (socket) => {
     io.emit('foodDropped', { x: data.x, y: data.y, by: data.ownerName });
   });
 
-  // 접속 해제 시 물고기 유지 (수조에 남겨둠), 커서 제거
   socket.on('disconnect', () => {
     console.log(`퇴장: ${socket.id}`);
     io.emit('onlineCount', io.engine.clientsCount);
@@ -93,7 +200,22 @@ io.on('connection', (socket) => {
   });
 });
 
+// ── 서버 시작 ──
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`아쿠아리움 서버 실행 중: http://localhost:${PORT}`);
+
+async function start() {
+  if (process.env.DATABASE_URL) {
+    await initDB();
+    await loadFishFromDB();
+  } else {
+    console.log('DATABASE_URL 없음 - DB 없이 메모리 모드로 실행');
+  }
+  server.listen(PORT, () => {
+    console.log(`아쿠아리움 서버 실행 중: http://localhost:${PORT}`);
+  });
+}
+
+start().catch(e => {
+  console.error('서버 시작 실패:', e);
+  process.exit(1);
 });
