@@ -1,0 +1,1407 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Multi Aquarium 🐠</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{overflow:hidden;background:#020810;font-family:'Segoe UI',system-ui,sans-serif;user-select:none}
+  canvas{display:block;position:fixed;top:0;left:0}
+
+  /* 상단 바 */
+  #top-bar{
+    position:fixed;top:0;left:0;right:0;height:48px;
+    background:rgba(5,15,35,0.85);backdrop-filter:blur(12px);
+    border-bottom:1px solid rgba(100,180,255,0.1);
+    display:flex;align-items:center;justify-content:space-between;
+    padding:0 20px;z-index:200;
+  }
+  #top-bar h1{
+    color:rgba(140,200,255,0.8);font-size:15px;font-weight:500;
+    letter-spacing:2px;
+  }
+  #top-bar .info{
+    color:rgba(140,200,255,0.4);font-size:11px;letter-spacing:1px;
+  }
+  #online-count{color:rgba(100,220,180,0.7)}
+  #fish-total{color:rgba(255,200,100,0.7)}
+
+  /* 하단 컨트롤 */
+  #bottom-bar{
+    position:fixed;bottom:0;left:0;right:0;height:52px;
+    background:rgba(5,15,35,0.85);backdrop-filter:blur(12px);
+    border-top:1px solid rgba(100,180,255,0.1);
+    display:flex;align-items:center;justify-content:center;gap:8px;
+    padding:0 16px;z-index:200;
+  }
+  .btn{
+    background:rgba(60,140,200,0.1);backdrop-filter:blur(6px);
+    border:1px solid rgba(100,180,255,0.12);border-radius:999px;
+    color:rgba(150,210,255,0.6);font-family:inherit;
+    font-size:11px;font-weight:500;letter-spacing:0.8px;
+    padding:8px 18px;cursor:pointer;transition:all 0.3s;
+    white-space:nowrap;
+  }
+  .btn:hover{background:rgba(60,140,200,0.25);color:rgba(180,230,255,0.9)}
+  .btn.primary{
+    background:rgba(60,180,120,0.15);border-color:rgba(100,220,160,0.2);
+    color:rgba(130,230,170,0.8);
+  }
+  .btn.primary:hover{background:rgba(60,180,120,0.3);color:rgba(160,255,200,1)}
+
+  /* 물고기 만들기 패널 */
+  #creator-overlay{
+    position:fixed;inset:0;background:rgba(2,8,16,0.7);
+    backdrop-filter:blur(8px);z-index:300;
+    display:none;align-items:center;justify-content:center;
+  }
+  #creator-overlay.open{display:flex}
+  #creator-wrapper{
+    display:flex;align-items:flex-start;gap:16px;
+    max-width:95vw;max-height:90vh;
+  }
+  #creator{
+    background:rgba(10,25,50,0.95);border:1px solid rgba(100,180,255,0.15);
+    border-radius:20px;padding:28px;width:420px;max-width:55vw;
+    max-height:85vh;overflow-y:auto;flex-shrink:0;
+  }
+  #preview-side{
+    background:rgba(10,25,50,0.95);border:1px solid rgba(100,180,255,0.15);
+    border-radius:20px;padding:20px;display:flex;flex-direction:column;
+    align-items:center;gap:10px;flex-shrink:0;
+    min-width:240px;
+  }
+  #preview-side h3{
+    color:rgba(160,220,255,0.7);font-size:13px;font-weight:500;
+    letter-spacing:1.5px;margin:0;
+  }
+  #preview-canvas{
+    background:rgba(5,15,35,0.6);border:1px solid rgba(100,180,255,0.1);
+    border-radius:12px;display:block;
+    width:220px;height:180px;
+  }
+  #preview-species-name{
+    color:rgba(140,200,255,0.5);font-size:11px;letter-spacing:1px;
+  }
+  @media (max-width:700px){
+    #creator-wrapper{flex-direction:column;align-items:center}
+    #creator{max-width:92vw}
+    #preview-side{width:100%;flex-direction:row;justify-content:center;padding:14px}
+  }
+  #creator h2{
+    color:rgba(160,220,255,0.85);font-size:16px;font-weight:500;
+    letter-spacing:1.5px;margin-bottom:20px;text-align:center;
+  }
+  .form-group{margin-bottom:16px}
+  .form-group label{
+    display:block;color:rgba(140,200,255,0.5);font-size:11px;
+    letter-spacing:1px;margin-bottom:6px;
+  }
+  .form-group input[type="text"]{
+    width:100%;background:rgba(20,40,70,0.6);border:1px solid rgba(100,180,255,0.12);
+    border-radius:10px;padding:10px 14px;color:rgba(200,230,255,0.9);
+    font-family:inherit;font-size:13px;outline:none;
+    transition:border-color 0.3s;
+  }
+  .form-group input[type="text"]:focus{border-color:rgba(100,180,255,0.35)}
+
+  /* 종 선택 그리드 */
+  .species-grid{
+    display:grid;grid-template-columns:repeat(4,1fr);gap:8px;
+  }
+  .species-card{
+    background:rgba(20,40,70,0.4);border:2px solid rgba(100,180,255,0.08);
+    border-radius:12px;padding:8px 4px;text-align:center;cursor:pointer;
+    transition:all 0.3s;
+  }
+  .species-card:hover{background:rgba(30,60,100,0.5);border-color:rgba(100,180,255,0.2)}
+  .species-card.selected{
+    background:rgba(40,80,140,0.4);border-color:rgba(100,200,255,0.5);
+  }
+  .species-card canvas{display:block;margin:0 auto 4px;width:64px;height:48px}
+  .species-card .name{
+    color:rgba(160,210,255,0.6);font-size:9px;letter-spacing:0.5px;
+  }
+
+  /* 색상 선택 */
+  .color-row{display:flex;gap:10px;flex-wrap:wrap}
+  .color-pick{display:flex;flex-direction:column;align-items:center;gap:4px}
+  .color-pick label{font-size:9px;color:rgba(140,200,255,0.4)}
+  .color-pick input[type="color"]{
+    width:36px;height:36px;border:2px solid rgba(100,180,255,0.15);
+    border-radius:8px;background:transparent;cursor:pointer;
+    padding:2px;
+  }
+
+  /* 미리보기 - #preview-side로 이동 */
+
+  /* 내 물고기 목록 */
+  #my-fish-panel{
+    position:fixed;right:0;top:48px;bottom:52px;width:220px;
+    background:rgba(5,15,35,0.85);backdrop-filter:blur(12px);
+    border-left:1px solid rgba(100,180,255,0.1);
+    z-index:200;transform:translateX(100%);transition:transform 0.3s;
+    overflow-y:auto;padding:16px 12px;
+  }
+  #my-fish-panel.open{transform:translateX(0)}
+  #my-fish-panel h3{
+    color:rgba(140,200,255,0.6);font-size:12px;letter-spacing:1px;
+    margin-bottom:12px;
+  }
+  .my-fish-item{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:8px 10px;background:rgba(20,40,70,0.3);
+    border:1px solid rgba(100,180,255,0.08);border-radius:10px;
+    margin-bottom:6px;
+  }
+  .my-fish-item .fname{
+    color:rgba(180,220,255,0.7);font-size:11px;
+  }
+  .my-fish-item .remove-btn{
+    background:rgba(255,80,80,0.15);border:1px solid rgba(255,80,80,0.2);
+    border-radius:6px;color:rgba(255,120,120,0.7);font-size:10px;
+    padding:3px 8px;cursor:pointer;
+  }
+  .my-fish-item .remove-btn:hover{background:rgba(255,80,80,0.3)}
+
+  /* 토스트 알림 */
+  #toast-container{
+    position:fixed;top:60px;left:50%;transform:translateX(-50%);
+    z-index:400;display:flex;flex-direction:column;gap:6px;align-items:center;
+  }
+  .toast{
+    background:rgba(10,30,60,0.9);backdrop-filter:blur(10px);
+    border:1px solid rgba(100,180,255,0.15);border-radius:999px;
+    color:rgba(160,220,255,0.7);font-size:11px;letter-spacing:0.5px;
+    padding:8px 18px;animation:toastIn 0.3s ease,toastOut 0.3s ease 2.5s forwards;
+  }
+  @keyframes toastIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes toastOut{to{opacity:0;transform:translateY(-10px)}}
+</style>
+</head>
+<body>
+
+<!-- 상단 바 -->
+<div id="top-bar">
+  <h1>MULTI AQUARIUM</h1>
+  <div class="info">
+    <span id="online-count">0</span> 접속 &nbsp;│&nbsp;
+    <span id="fish-total">0</span> 마리
+  </div>
+</div>
+
+<!-- 캔버스 -->
+<canvas id="c"></canvas>
+
+<!-- 하단 바 -->
+<div id="bottom-bar">
+  <button class="btn primary" id="btn-create">+ 물고기 만들기</button>
+  <button class="btn" id="btn-feed">먹이주기 (F)</button>
+  <button class="btn" id="btn-my-fish">내 물고기</button>
+  <button class="btn" id="btn-bubble">기포 (B)</button>
+  <button class="btn" id="btn-night">야간모드 (N)</button>
+</div>
+
+<!-- 물고기 만들기 패널 -->
+<div id="creator-overlay">
+  <div id="creator-wrapper">
+    <div id="creator">
+      <h2>나만의 물고기 만들기</h2>
+
+      <div class="form-group">
+        <label>닉네임</label>
+        <input type="text" id="input-owner" placeholder="당신의 이름" maxlength="20">
+      </div>
+      <div class="form-group">
+        <label>물고기 이름</label>
+        <input type="text" id="input-fishname" placeholder="물고기 이름을 지어주세요" maxlength="20">
+      </div>
+
+      <div class="form-group">
+        <label>종류 선택</label>
+        <div class="species-grid" id="species-grid"></div>
+      </div>
+
+      <div class="form-group">
+        <label>색상 커스텀</label>
+        <div class="color-row">
+          <div class="color-pick">
+            <input type="color" id="color-body" value="#FF6B35">
+            <label>몸통</label>
+          </div>
+          <div class="color-pick">
+            <input type="color" id="color-fin" value="#FF9F1C">
+            <label>지느러미</label>
+          </div>
+          <div class="color-pick">
+            <input type="color" id="color-belly" value="#FFE0B2">
+            <label>배</label>
+          </div>
+          <div class="color-pick">
+            <input type="color" id="color-accent" value="#FFFFFF">
+            <label>포인트</label>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;justify-content:center">
+        <button class="btn" id="btn-cancel">취소</button>
+        <button class="btn primary" id="btn-submit">수조에 넣기!</button>
+      </div>
+    </div>
+
+    <div id="preview-side">
+      <h3>미리보기</h3>
+      <canvas id="preview-canvas" width="220" height="180"></canvas>
+      <div id="preview-species-name">클라운피시</div>
+    </div>
+  </div>
+</div>
+
+<!-- 내 물고기 패널 -->
+<div id="my-fish-panel">
+  <h3>내 물고기</h3>
+  <div id="my-fish-list"></div>
+</div>
+
+<!-- 토스트 -->
+<div id="toast-container"></div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+// ── 소켓 ──
+const socket = io();
+
+// ── 캔버스 설정 ──
+const cv = document.getElementById('c');
+const ctx = cv.getContext('2d');
+let W, H;
+const resize = () => {
+  W = cv.width = innerWidth;
+  H = cv.height = innerHeight;
+};
+resize();
+addEventListener('resize', resize);
+
+// ── 유틸리티 ──
+const rand = (a,b) => Math.random()*(b-a)+a;
+const pick = a => a[Math.floor(Math.random()*a.length)];
+const lerp = (a,b,t) => a+(b-a)*t;
+const clamp = (v,mn,mx) => Math.max(mn,Math.min(mx,v));
+const dist = (x1,y1,x2,y2) => Math.hypot(x2-x1,y2-y1);
+const TAU = Math.PI * 2;
+
+// ── 상태 ──
+let mx = W/2, my = H/2;
+let nightMode = false;
+let bubbleMode = false;
+let time = 0;
+let frameCount = 0;
+const FOOD_SEARCH_INTERVAL = 8;
+
+// ══════════════════════════════════════════════
+// ── 물고기 종별 드로잉 (원본 기반) ──
+// ══════════════════════════════════════════════
+const SPECIES = [
+  // 0: 클라운피시
+  {
+    name:'클라운피시',
+    bodyW:0.55, bodyH:0.35, sizeRange:[22,38],
+    defaultColors: {body:'#FF6B35',fin:'#FF9F1C',belly:'#FFE0B2',accent:'#FFF'},
+    draw(ctx, sz, p, tw, fw, t) {
+      ctx.save(); ctx.translate(-sz*0.5,0); ctx.rotate(tw);
+      const tg = ctx.createRadialGradient(0,0,0,-sz*0.2,0,sz*0.4);
+      tg.addColorStop(0,p.fin); tg.addColorStop(1,p.body+'40');
+      ctx.fillStyle=tg;
+      ctx.beginPath(); ctx.moveTo(0,0);
+      ctx.bezierCurveTo(-sz*0.2,-sz*0.35,-sz*0.5,-sz*0.3,-sz*0.45,-sz*0.1);
+      ctx.bezierCurveTo(-sz*0.55,0,-sz*0.5,sz*0.3,-sz*0.2,sz*0.35);
+      ctx.closePath(); ctx.fill(); ctx.restore();
+      const bg = ctx.createRadialGradient(sz*0.08,-sz*0.05,sz*0.05,0,0,sz*0.55);
+      bg.addColorStop(0,p.belly); bg.addColorStop(0.35,p.body); bg.addColorStop(1,p.body+'BB');
+      ctx.fillStyle=bg;
+      ctx.beginPath(); ctx.ellipse(0,0,sz*0.55,sz*0.35,0,0,TAU); ctx.fill();
+      ctx.strokeStyle='#FFF'; ctx.lineWidth=sz*0.045; ctx.globalAlpha*=0.85;
+      for(let i=-1;i<=1;i++){
+        const sx=i*sz*0.24;
+        ctx.beginPath(); ctx.moveTo(sx,-sz*0.34); ctx.lineTo(sx,sz*0.34); ctx.stroke();
+      }
+      ctx.globalAlpha/=0.85;
+      ctx.fillStyle=p.fin+'CC';
+      ctx.beginPath(); ctx.moveTo(-sz*0.2,-sz*0.3);
+      ctx.quadraticCurveTo(0,-sz*0.55,sz*0.15,-sz*0.3);
+      ctx.closePath(); ctx.fill();
+    }
+  },
+  // 1: 엔젤피시
+  {
+    name:'엔젤피시',
+    bodyW:0.4, bodyH:0.55, sizeRange:[30,50],
+    defaultColors: {body:'#E8D5B7',fin:'#C9A96E',belly:'#F5ECD7',accent:'#2C2C54'},
+    draw(ctx, sz, p, tw, fw, t) {
+      ctx.save(); ctx.translate(-sz*0.35,0); ctx.rotate(tw*0.7);
+      ctx.fillStyle=p.fin+'AA';
+      ctx.beginPath(); ctx.moveTo(0,0);
+      ctx.bezierCurveTo(-sz*0.15,-sz*0.2,-sz*0.4,-sz*0.4,-sz*0.5,-sz*0.15);
+      ctx.bezierCurveTo(-sz*0.35,0,-sz*0.4,sz*0.4,-sz*0.15,sz*0.2);
+      ctx.closePath(); ctx.fill(); ctx.restore();
+      const bg = ctx.createRadialGradient(0,0,sz*0.05,0,0,sz*0.45);
+      bg.addColorStop(0,p.belly); bg.addColorStop(0.5,p.body); bg.addColorStop(1,p.body+'CC');
+      ctx.fillStyle=bg;
+      ctx.beginPath(); ctx.moveTo(sz*0.38,0);
+      ctx.bezierCurveTo(sz*0.3,-sz*0.25,sz*0.1,-sz*0.45,-sz*0.05,-sz*0.48);
+      ctx.bezierCurveTo(-sz*0.2,-sz*0.35,-sz*0.35,-sz*0.15,-sz*0.38,0);
+      ctx.bezierCurveTo(-sz*0.35,sz*0.15,-sz*0.2,sz*0.35,-sz*0.05,sz*0.48);
+      ctx.bezierCurveTo(sz*0.1,sz*0.45,sz*0.3,sz*0.25,sz*0.38,0);
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle=p.accent; ctx.lineWidth=1.5; ctx.globalAlpha*=0.4;
+      for(let i=-1;i<=1;i+=2){
+        ctx.beginPath(); ctx.moveTo(i*sz*0.12,-sz*0.4); ctx.lineTo(i*sz*0.12,sz*0.4); ctx.stroke();
+      }
+      ctx.globalAlpha/=0.4;
+      ctx.fillStyle=p.fin+'88';
+      ctx.beginPath(); ctx.moveTo(-sz*0.1,-sz*0.45);
+      ctx.bezierCurveTo(sz*0.05,-sz*0.85,sz*0.2,-sz*0.7,sz*0.15,-sz*0.35);
+      ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(-sz*0.1,sz*0.45);
+      ctx.bezierCurveTo(sz*0.05,sz*0.85,sz*0.2,sz*0.7,sz*0.15,sz*0.35);
+      ctx.closePath(); ctx.fill();
+    }
+  },
+  // 2: 네온테트라
+  {
+    name:'네온테트라',
+    bodyW:0.5, bodyH:0.2, sizeRange:[12,22],
+    defaultColors: {body:'#1A3A5C',fin:'#90E0EF',belly:'#B0D4E8',accent:'#00B4D8'},
+    draw(ctx, sz, p, tw, fw, t) {
+      ctx.save(); ctx.translate(-sz*0.45,0); ctx.rotate(tw);
+      ctx.fillStyle=p.fin+'AA';
+      ctx.beginPath(); ctx.moveTo(0,0);
+      ctx.lineTo(-sz*0.3,-sz*0.2); ctx.lineTo(-sz*0.15,0); ctx.lineTo(-sz*0.3,sz*0.2);
+      ctx.closePath(); ctx.fill(); ctx.restore();
+      const bg = ctx.createLinearGradient(0,-sz*0.2,0,sz*0.2);
+      bg.addColorStop(0,p.body); bg.addColorStop(0.5,p.accent); bg.addColorStop(1,p.body);
+      ctx.fillStyle=bg;
+      ctx.beginPath(); ctx.ellipse(0,0,sz*0.5,sz*0.18,0,0,TAU); ctx.fill();
+      ctx.strokeStyle='#00E5FF'; ctx.lineWidth=sz*0.07; ctx.globalAlpha*=0.8;
+      ctx.shadowColor='#00E5FF'; ctx.shadowBlur=8;
+      ctx.beginPath(); ctx.moveTo(-sz*0.4,-sz*0.02); ctx.lineTo(sz*0.15,-sz*0.02); ctx.stroke();
+      ctx.shadowBlur=0;
+      ctx.fillStyle='#FF1744'; ctx.globalAlpha*=0.9;
+      ctx.beginPath(); ctx.ellipse(-sz*0.15,sz*0.02,sz*0.25,sz*0.1,0,0,TAU); ctx.fill();
+      ctx.globalAlpha/=0.72;
+    }
+  },
+  // 3: 베타피시
+  {
+    name:'베타피시',
+    bodyW:0.4, bodyH:0.3, sizeRange:[28,48],
+    defaultColors: {body:'#7B2D8E',fin:'#C77DFF',belly:'#E0AAFF',accent:'#F3D5FF'},
+    draw(ctx, sz, p, tw, fw, t) {
+      ctx.save(); ctx.translate(-sz*0.35,0);
+      for(let i=0;i<5;i++){
+        const angle = tw + Math.sin(t*2+i*0.8)*0.25;
+        ctx.save(); ctx.rotate(angle + (i-2)*0.15);
+        const tg = ctx.createLinearGradient(0,0,-sz*0.8,0);
+        tg.addColorStop(0,p.fin); tg.addColorStop(1,p.fin+'10');
+        ctx.fillStyle=tg;
+        ctx.beginPath(); ctx.moveTo(0,(i-2)*sz*0.06);
+        ctx.bezierCurveTo(-sz*0.3,-sz*0.15+i*sz*0.04,-sz*0.6,-sz*0.2+i*sz*0.08,-sz*0.8,(i-2)*sz*0.12);
+        ctx.bezierCurveTo(-sz*0.6,i*sz*0.06,-sz*0.3,(i-1)*sz*0.06,0,(i-2)*sz*0.06+sz*0.04);
+        ctx.closePath(); ctx.fill(); ctx.restore();
+      }
+      ctx.restore();
+      ctx.save(); ctx.rotate(fw*0.4);
+      const dg = ctx.createLinearGradient(0,-sz*0.3,0,-sz*0.75);
+      dg.addColorStop(0,p.fin); dg.addColorStop(1,p.fin+'20');
+      ctx.fillStyle=dg;
+      ctx.beginPath(); ctx.moveTo(-sz*0.25,-sz*0.25);
+      ctx.bezierCurveTo(-sz*0.1,-sz*0.7,sz*0.2,-sz*0.75,sz*0.3,-sz*0.2);
+      ctx.closePath(); ctx.fill(); ctx.restore();
+      ctx.save(); ctx.translate(0,sz*0.2); ctx.rotate(fw*0.5);
+      ctx.fillStyle=p.fin+'88';
+      ctx.beginPath(); ctx.moveTo(-sz*0.15,0);
+      ctx.bezierCurveTo(-sz*0.1,sz*0.45,sz*0.15,sz*0.4,sz*0.1,0);
+      ctx.closePath(); ctx.fill(); ctx.restore();
+      const bg = ctx.createRadialGradient(sz*0.05,-sz*0.05,sz*0.03,0,0,sz*0.4);
+      bg.addColorStop(0,p.accent); bg.addColorStop(0.4,p.body); bg.addColorStop(1,p.body+'DD');
+      ctx.fillStyle=bg;
+      ctx.beginPath(); ctx.ellipse(0,0,sz*0.4,sz*0.28,0,0,TAU); ctx.fill();
+      ctx.globalAlpha*=0.15;
+      for(let i=0;i<8;i++){
+        const sx=-sz*0.2+i*sz*0.07, sy=-sz*0.1+(i%3)*sz*0.08;
+        ctx.fillStyle=p.accent;
+        ctx.beginPath(); ctx.arc(sx,sy,sz*0.035,0,TAU); ctx.fill();
+      }
+      ctx.globalAlpha/=0.15;
+    }
+  },
+  // 4: 금붕어
+  {
+    name:'금붕어',
+    bodyW:0.5, bodyH:0.4, sizeRange:[25,45],
+    defaultColors: {body:'#FF8C42',fin:'#FFB347',belly:'#FFEAA7',accent:'#FFD700'},
+    draw(ctx, sz, p, tw, fw, t) {
+      ctx.save(); ctx.translate(-sz*0.45,0);
+      for(let s=-1;s<=1;s+=2){
+        ctx.save(); ctx.rotate(tw*0.8+s*0.25);
+        const tg = ctx.createLinearGradient(0,0,-sz*0.5,0);
+        tg.addColorStop(0,p.fin); tg.addColorStop(1,p.fin+'30');
+        ctx.fillStyle=tg;
+        ctx.beginPath(); ctx.moveTo(0,s*sz*0.03);
+        ctx.bezierCurveTo(-sz*0.2,s*sz*0.05,-sz*0.4,s*sz*0.3,-sz*0.5,s*sz*0.35);
+        ctx.bezierCurveTo(-sz*0.35,s*sz*0.15,-sz*0.2,s*sz*0.02,0,0);
+        ctx.closePath(); ctx.fill(); ctx.restore();
+      }
+      ctx.restore();
+      ctx.fillStyle=p.fin+'BB';
+      ctx.beginPath(); ctx.moveTo(-sz*0.15,-sz*0.35);
+      ctx.bezierCurveTo(0,-sz*0.6,sz*0.15,-sz*0.55,sz*0.2,-sz*0.3);
+      ctx.closePath(); ctx.fill();
+      const bg = ctx.createRadialGradient(sz*0.05,-sz*0.08,sz*0.05,0,0,sz*0.48);
+      bg.addColorStop(0,p.belly); bg.addColorStop(0.4,p.body); bg.addColorStop(1,p.body+'CC');
+      ctx.fillStyle=bg;
+      ctx.beginPath(); ctx.ellipse(0,0,sz*0.48,sz*0.38,0,0,TAU); ctx.fill();
+      ctx.globalAlpha*=0.2;
+      ctx.fillStyle=p.accent;
+      ctx.beginPath(); ctx.ellipse(sz*0.1,-sz*0.12,sz*0.2,sz*0.12,-0.3,0,TAU); ctx.fill();
+      ctx.globalAlpha/=0.2;
+      ctx.save(); ctx.translate(sz*0.05,sz*0.3); ctx.rotate(fw);
+      ctx.fillStyle=p.fin+'88';
+      ctx.beginPath(); ctx.ellipse(0,0,sz*0.12,sz*0.08,0.4,0,TAU); ctx.fill();
+      ctx.restore();
+    }
+  },
+  // 5: 블루탕
+  {
+    name:'블루탕',
+    bodyW:0.5, bodyH:0.35, sizeRange:[24,42],
+    defaultColors: {body:'#0077B6',fin:'#023E8A',belly:'#90E0EF',accent:'#FFD700'},
+    draw(ctx, sz, p, tw, fw, t) {
+      ctx.save(); ctx.translate(-sz*0.48,0); ctx.rotate(tw);
+      ctx.fillStyle=p.accent;
+      ctx.beginPath(); ctx.moveTo(0,0);
+      ctx.bezierCurveTo(-sz*0.15,-sz*0.22,-sz*0.35,-sz*0.25,-sz*0.4,-sz*0.15);
+      ctx.bezierCurveTo(-sz*0.3,0,-sz*0.35,sz*0.25,-sz*0.15,sz*0.22);
+      ctx.closePath(); ctx.fill(); ctx.restore();
+      const bg = ctx.createRadialGradient(sz*0.08,-sz*0.05,sz*0.05,0,0,sz*0.5);
+      bg.addColorStop(0,p.belly); bg.addColorStop(0.35,'#00B4D8'); bg.addColorStop(0.7,p.body); bg.addColorStop(1,p.fin);
+      ctx.fillStyle=bg;
+      ctx.beginPath(); ctx.ellipse(0,0,sz*0.5,sz*0.35,0,0,TAU); ctx.fill();
+      ctx.strokeStyle='#0A1628'; ctx.lineWidth=sz*0.04; ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(sz*0.15,-sz*0.25);
+      ctx.bezierCurveTo(0,-sz*0.1,-sz*0.15,sz*0.05,-sz*0.25,sz*0.15);
+      ctx.bezierCurveTo(-sz*0.3,sz*0.25,-sz*0.15,sz*0.3,0,sz*0.2);
+      ctx.stroke();
+      ctx.fillStyle=p.body+'CC';
+      ctx.beginPath(); ctx.moveTo(-sz*0.25,-sz*0.32);
+      ctx.quadraticCurveTo(0,-sz*0.5,sz*0.2,-sz*0.32);
+      ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(-sz*0.2,sz*0.32);
+      ctx.quadraticCurveTo(0,sz*0.48,sz*0.15,sz*0.32);
+      ctx.closePath(); ctx.fill();
+    }
+  },
+  // 6: 구피
+  {
+    name:'구피',
+    bodyW:0.35, bodyH:0.2, sizeRange:[14,26],
+    defaultColors: {body:'#A0A0A0',fin:'#FF6B6B',belly:'#D0D0D0',accent:'#FF8E8E'},
+    draw(ctx, sz, p, tw, fw, t) {
+      ctx.save(); ctx.translate(-sz*0.3,0);
+      for(let i=0;i<7;i++){
+        const angle = tw + (i-3)*0.18 + Math.sin(t*3+i)*0.08;
+        ctx.save(); ctx.rotate(angle);
+        const a = 1 - Math.abs(i-3)/4;
+        const tg = ctx.createLinearGradient(0,0,-sz*0.65,0);
+        tg.addColorStop(0,p.fin); tg.addColorStop(0.5,p.accent+'CC'); tg.addColorStop(1,p.fin+'20');
+        ctx.fillStyle=tg; ctx.globalAlpha*=a*0.7;
+        ctx.beginPath(); ctx.moveTo(0,0);
+        ctx.bezierCurveTo(-sz*0.2,-sz*0.08,-sz*0.4,-sz*0.12,-sz*0.6,(i-3)*sz*0.06);
+        ctx.bezierCurveTo(-sz*0.4,sz*0.12,-sz*0.2,sz*0.08,0,sz*0.02);
+        ctx.closePath(); ctx.fill();
+        ctx.globalAlpha/=(a*0.7||1); ctx.restore();
+      }
+      ctx.restore();
+      const bg = ctx.createRadialGradient(0,0,sz*0.03,0,0,sz*0.3);
+      bg.addColorStop(0,p.belly); bg.addColorStop(1,p.body);
+      ctx.fillStyle=bg;
+      ctx.beginPath(); ctx.ellipse(0,0,sz*0.32,sz*0.18,0,0,TAU); ctx.fill();
+    }
+  },
+  // 7: 디스커스
+  {
+    name:'디스커스',
+    bodyW:0.45, bodyH:0.45, sizeRange:[30,50],
+    defaultColors: {body:'#E63946',fin:'#F4845F',belly:'#FFB4A2',accent:'#F7B267'},
+    draw(ctx, sz, p, tw, fw, t) {
+      ctx.save(); ctx.translate(-sz*0.4,0); ctx.rotate(tw*0.6);
+      ctx.fillStyle=p.fin+'AA';
+      ctx.beginPath(); ctx.moveTo(0,0);
+      ctx.quadraticCurveTo(-sz*0.15,-sz*0.15,-sz*0.25,-sz*0.08);
+      ctx.quadraticCurveTo(-sz*0.2,0,-sz*0.25,sz*0.08);
+      ctx.quadraticCurveTo(-sz*0.15,sz*0.15,0,0);
+      ctx.closePath(); ctx.fill(); ctx.restore();
+      const bg = ctx.createRadialGradient(0,0,sz*0.05,0,0,sz*0.45);
+      bg.addColorStop(0,p.belly); bg.addColorStop(0.4,p.body); bg.addColorStop(1,p.fin+'CC');
+      ctx.fillStyle=bg;
+      ctx.beginPath(); ctx.arc(0,0,sz*0.43,0,TAU); ctx.fill();
+      ctx.strokeStyle=p.accent+'60'; ctx.lineWidth=1.2;
+      for(let i=-3;i<=3;i++){
+        ctx.beginPath();
+        const ox=i*sz*0.1;
+        ctx.moveTo(ox,-sz*0.35);
+        for(let y=-sz*0.35;y<sz*0.35;y+=sz*0.05){
+          ctx.lineTo(ox+Math.sin(y*0.15+t)*sz*0.02, y);
+        }
+        ctx.stroke();
+      }
+      ctx.fillStyle=p.fin+'99';
+      ctx.beginPath(); ctx.moveTo(-sz*0.3,-sz*0.38);
+      ctx.bezierCurveTo(-sz*0.1,-sz*0.55,sz*0.15,-sz*0.55,sz*0.25,-sz*0.38);
+      ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(-sz*0.3,sz*0.38);
+      ctx.bezierCurveTo(-sz*0.1,sz*0.55,sz*0.15,sz*0.55,sz*0.25,sz*0.38);
+      ctx.closePath(); ctx.fill();
+    }
+  },
+  // 8: 만다린피시
+  {
+    name:'만다린피시',
+    bodyW:0.45, bodyH:0.35, sizeRange:[16,28],
+    defaultColors: {body:'#FF6700',fin:'#2EC4B6',belly:'#FFE66D',accent:'#3A86FF'},
+    draw(ctx, sz, p, tw, fw, t) {
+      ctx.save(); ctx.translate(-sz*0.4,0); ctx.rotate(tw);
+      ctx.fillStyle=p.fin;
+      ctx.beginPath(); ctx.moveTo(0,0);
+      ctx.bezierCurveTo(-sz*0.15,-sz*0.2,-sz*0.35,-sz*0.25,-sz*0.3,-sz*0.05);
+      ctx.bezierCurveTo(-sz*0.35,sz*0.25,-sz*0.15,sz*0.2,0,0);
+      ctx.closePath(); ctx.fill(); ctx.restore();
+      ctx.save(); ctx.rotate(fw*0.3);
+      ctx.fillStyle=p.accent+'BB';
+      ctx.beginPath(); ctx.moveTo(-sz*0.15,-sz*0.3);
+      ctx.bezierCurveTo(-sz*0.05,-sz*0.65,sz*0.2,-sz*0.6,sz*0.15,-sz*0.28);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle=p.body+'88';
+      ctx.beginPath(); ctx.arc(0,-sz*0.45,sz*0.04,0,TAU); ctx.fill();
+      ctx.beginPath(); ctx.arc(sz*0.08,-sz*0.42,sz*0.03,0,TAU); ctx.fill();
+      ctx.restore();
+      const bg = ctx.createRadialGradient(0,0,sz*0.05,0,0,sz*0.42);
+      bg.addColorStop(0,p.belly); bg.addColorStop(0.4,p.body); bg.addColorStop(1,p.body+'BB');
+      ctx.fillStyle=bg;
+      ctx.beginPath(); ctx.ellipse(0,0,sz*0.42,sz*0.32,0,0,TAU); ctx.fill();
+      ctx.globalAlpha*=0.4;
+      ctx.strokeStyle=p.accent; ctx.lineWidth=1.5;
+      for(let i=0;i<5;i++){
+        const a = i*1.2+t*0.5;
+        ctx.beginPath(); ctx.arc(Math.cos(a)*sz*0.15, Math.sin(a)*sz*0.1, sz*0.08+i*sz*0.02, 0, Math.PI); ctx.stroke();
+      }
+      ctx.fillStyle=p.fin; ctx.lineWidth=0;
+      for(let i=0;i<4;i++){
+        ctx.beginPath(); ctx.arc(Math.sin(t*0.7+i*1.8)*sz*0.12, Math.cos(t*0.5+i*2.1)*sz*0.08, sz*0.025, 0, TAU); ctx.fill();
+      }
+      ctx.globalAlpha/=0.4;
+    }
+  },
+  // 9: 무어리시아이돌
+  {
+    name:'무어리시아이돌',
+    bodyW:0.4, bodyH:0.45, sizeRange:[26,42],
+    defaultColors: {body:'#FFD700',fin:'#FFFFFF',belly:'#FFF8DC',accent:'#1A1A2E'},
+    draw(ctx, sz, p, tw, fw, t) {
+      ctx.save(); ctx.translate(-sz*0.35,0); ctx.rotate(tw*0.5);
+      ctx.fillStyle=p.accent;
+      ctx.beginPath(); ctx.moveTo(0,0);
+      ctx.quadraticCurveTo(-sz*0.15,-sz*0.15,-sz*0.25,-sz*0.08);
+      ctx.quadraticCurveTo(-sz*0.2,0,-sz*0.25,sz*0.08);
+      ctx.quadraticCurveTo(-sz*0.15,sz*0.15,0,0);
+      ctx.closePath(); ctx.fill(); ctx.restore();
+      const bg = ctx.createLinearGradient(-sz*0.3,0,sz*0.3,0);
+      bg.addColorStop(0,p.accent); bg.addColorStop(0.2,p.body); bg.addColorStop(0.5,p.fin);
+      bg.addColorStop(0.7,p.body); bg.addColorStop(1,p.accent);
+      ctx.fillStyle=bg;
+      ctx.beginPath(); ctx.ellipse(0,0,sz*0.38,sz*0.42,0,0,TAU); ctx.fill();
+      ctx.fillStyle=p.body;
+      ctx.beginPath(); ctx.moveTo(sz*0.35,0);
+      ctx.quadraticCurveTo(sz*0.55,-sz*0.04,sz*0.6,0);
+      ctx.quadraticCurveTo(sz*0.55,sz*0.04,sz*0.35,0); ctx.fill();
+      ctx.save();
+      const ribbonWag = Math.sin(t*1.5)*0.15;
+      ctx.strokeStyle=p.fin; ctx.lineWidth=2; ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(0,-sz*0.4);
+      ctx.bezierCurveTo(sz*0.1,-sz*0.8+ribbonWag*sz, sz*0.3+Math.sin(t*2)*sz*0.1,-sz*1.1, sz*0.5+Math.sin(t*1.8)*sz*0.15,-sz*1.0+ribbonWag*sz*0.5);
+      ctx.stroke(); ctx.restore();
+      ctx.fillStyle=p.accent;
+      ctx.fillRect(-sz*0.02,-sz*0.42,sz*0.04,sz*0.84);
+      ctx.fillRect(sz*0.18,-sz*0.38,sz*0.04,sz*0.76);
+    }
+  },
+  // 10: 복어
+  {
+    name:'복어',
+    bodyW:0.4, bodyH:0.4, sizeRange:[18,32],
+    defaultColors: {body:'#B8D4A3',fin:'#8FBC8F',belly:'#FFFDE7',accent:'#5D4037'},
+    draw(ctx, sz, p, tw, fw, t) {
+      ctx.save(); ctx.translate(-sz*0.35,0); ctx.rotate(tw*0.5);
+      ctx.fillStyle=p.fin;
+      ctx.beginPath(); ctx.moveTo(0,0);
+      ctx.lineTo(-sz*0.2,-sz*0.1); ctx.lineTo(-sz*0.18,0); ctx.lineTo(-sz*0.2,sz*0.1);
+      ctx.closePath(); ctx.fill(); ctx.restore();
+      const bg = ctx.createRadialGradient(0,-sz*0.05,sz*0.05,0,0,sz*0.38);
+      bg.addColorStop(0,p.belly); bg.addColorStop(0.5,p.body); bg.addColorStop(1,p.body+'CC');
+      ctx.fillStyle=bg;
+      ctx.beginPath(); ctx.arc(0,0,sz*0.38,0,TAU); ctx.fill();
+      ctx.fillStyle=p.belly+'CC';
+      ctx.beginPath(); ctx.ellipse(0,sz*0.1,sz*0.25,sz*0.2,0,0,TAU); ctx.fill();
+      ctx.fillStyle=p.accent+'44';
+      for(let i=0;i<8;i++){
+        const a=i*TAU/8, r=sz*0.22;
+        ctx.beginPath(); ctx.arc(Math.cos(a)*r,Math.sin(a)*r-sz*0.03,sz*0.03,0,TAU); ctx.fill();
+      }
+      ctx.save(); ctx.translate(sz*0.15,sz*0.15); ctx.rotate(fw);
+      ctx.fillStyle=p.fin+'AA';
+      ctx.beginPath(); ctx.ellipse(0,0,sz*0.1,sz*0.05,0.5,0,TAU); ctx.fill();
+      ctx.restore();
+      ctx.fillStyle=p.fin+'BB';
+      ctx.beginPath(); ctx.moveTo(-sz*0.08,-sz*0.35);
+      ctx.quadraticCurveTo(0,-sz*0.5,sz*0.08,-sz*0.35);
+      ctx.closePath(); ctx.fill();
+    }
+  },
+  // 11: 라이언피시
+  {
+    name:'라이언피시',
+    bodyW:0.45, bodyH:0.3, sizeRange:[28,45],
+    defaultColors: {body:'#8B0000',fin:'#CD5C5C',belly:'#FFDAB9',accent:'#FFFFFF'},
+    draw(ctx, sz, p, tw, fw, t) {
+      ctx.save(); ctx.translate(-sz*0.42,0); ctx.rotate(tw);
+      ctx.fillStyle=p.fin+'BB';
+      ctx.beginPath(); ctx.moveTo(0,0);
+      ctx.lineTo(-sz*0.25,-sz*0.2); ctx.lineTo(-sz*0.2,0); ctx.lineTo(-sz*0.25,sz*0.2);
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle=p.accent+'88'; ctx.lineWidth=1;
+      for(let i=-2;i<=2;i++){
+        ctx.beginPath(); ctx.moveTo(0,i*sz*0.03); ctx.lineTo(-sz*0.22,i*sz*0.06); ctx.stroke();
+      }
+      ctx.restore();
+      const bg = ctx.createRadialGradient(0,0,sz*0.05,0,0,sz*0.4);
+      bg.addColorStop(0,p.belly); bg.addColorStop(0.5,p.body); bg.addColorStop(1,p.body+'DD');
+      ctx.fillStyle=bg;
+      ctx.beginPath(); ctx.ellipse(0,0,sz*0.42,sz*0.28,0,0,TAU); ctx.fill();
+      ctx.strokeStyle=p.accent+'88'; ctx.lineWidth=1.5;
+      for(let i=-3;i<=3;i++){
+        ctx.beginPath(); ctx.moveTo(i*sz*0.1,-sz*0.26); ctx.lineTo(i*sz*0.1,sz*0.26); ctx.stroke();
+      }
+      ctx.save(); ctx.translate(sz*0.05,sz*0.1);
+      for(let i=0;i<7;i++){
+        const angle = fw*0.6 + 0.3 + i*0.18;
+        ctx.save(); ctx.rotate(angle);
+        ctx.strokeStyle=p.body; ctx.lineWidth=1.5;
+        ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(0,sz*0.55); ctx.stroke();
+        if(i<6){
+          ctx.fillStyle=p.fin+'44';
+          ctx.beginPath(); ctx.moveTo(0,sz*0.1); ctx.lineTo(0,sz*0.5); ctx.lineTo(sz*0.05,sz*0.48);
+          ctx.closePath(); ctx.fill();
+        }
+        ctx.restore();
+      }
+      ctx.restore();
+      for(let i=0;i<8;i++){
+        const sx=-sz*0.3+i*sz*0.08;
+        ctx.strokeStyle=p.body+'CC'; ctx.lineWidth=1;
+        ctx.beginPath(); ctx.moveTo(sx,-sz*0.25);
+        ctx.lineTo(sx+Math.sin(t+i)*sz*0.02,-sz*0.25-sz*0.3-Math.sin(t*1.5+i)*sz*0.03);
+        ctx.stroke();
+      }
+    }
+  },
+];
+
+// ══════════════════════
+// ── 물고기 클래스 ──
+// ══════════════════════
+class Fish {
+  constructor(data) {
+    const si = data.speciesIdx !== undefined ? data.speciesIdx : Math.floor(rand(0, SPECIES.length));
+    this.species = SPECIES[si];
+    this.speciesIdx = si;
+    this.id = data.id;
+    this.ownerId = data.ownerId;
+    this.ownerName = data.ownerName || '익명';
+    this.fishName = data.name || '이름없음';
+    this.x = data.x || rand(100, W-100);
+    this.y = data.y || rand(120, H-200);
+    this.palette = data.customColors || this.species.defaultColors;
+    const sr = this.species.sizeRange;
+    this.size = rand(sr[0], sr[1]);
+    this.speed = rand(0.4, 1.2);
+    this.dir = data.dir || (Math.random()>0.5?1:-1);
+    this.vx = this.speed*this.dir;
+    this.vy = rand(-0.2,0.2);
+    this.targetVx = this.vx;
+    this.targetVy = this.vy;
+    this.turnCooldown = rand(2,8);
+    this.tailPhase = rand(0,TAU);
+    this.tailSpeed = rand(3,6);
+    this.finPhase = rand(0,TAU);
+    this.chasingFood = null;
+    this.wanderAngle = rand(0,TAU);
+    this.z = rand(0.6,1.2);
+    this.actualSize = this.size*this.z;
+    this.opacity = 0.5+this.z*0.4;
+    this.mouthOpen = 0;
+    this.blinkTimer = rand(3,8);
+    this.blinking = false;
+    this.blinkDuration = 0;
+    this.showName = false;
+    this.nameTimer = 0;
+  }
+
+  update(dt) {
+    const s = dt*60;
+    this.tailPhase += this.tailSpeed*dt;
+    this.finPhase += 4*dt;
+    this.blinkTimer -= dt;
+    if(this.blinkTimer<=0&&!this.blinking){this.blinking=true;this.blinkDuration=0.15;}
+    if(this.blinking){this.blinkDuration-=dt;if(this.blinkDuration<=0){this.blinking=false;this.blinkTimer=rand(3,10);}}
+    if(this.nameTimer>0) this.nameTimer -= dt;
+    else this.showName = false;
+
+    if(this.chasingFood&&this.chasingFood.eaten) this.chasingFood=null;
+    if(this.chasingFood){
+      const f=this.chasingFood, dx=f.x-this.x, dy=f.y-this.y, d=Math.hypot(dx,dy);
+      if(d<this.actualSize*0.5){f.eaten=true;this.chasingFood=null;this.mouthOpen=0.3;setTimeout(()=>this.mouthOpen=0,300);}
+      else{this.targetVx=(dx/d)*this.speed*2.5;this.targetVy=(dy/d)*this.speed*2.5;this.dir=this.targetVx>0?1:-1;}
+    } else {
+      this.turnCooldown-=dt;
+      if(this.turnCooldown<=0){
+        this.wanderAngle+=rand(-0.8,0.8);
+        this.targetVx=Math.cos(this.wanderAngle)*this.speed;
+        this.targetVy=Math.sin(this.wanderAngle)*this.speed*0.4;
+        if(Math.abs(this.targetVx)>0.1)this.dir=this.targetVx>0?1:-1;
+        this.turnCooldown=rand(2,6);
+      }
+      if(foods.length>0 && (frameCount+this.id)%FOOD_SEARCH_INTERVAL===0){
+        let closest=null,closestDist=300;
+        for(let fi=0;fi<foods.length;fi++){const f=foods[fi];if(f.eaten)continue;const dx=f.x-this.x,dy=f.y-this.y,d=Math.sqrt(dx*dx+dy*dy);if(d<closestDist){closest=f;closestDist=d;}}
+        if(closest)this.chasingFood=closest;
+      }
+    }
+    const margin=80;
+    if(this.x<margin)this.targetVx=Math.abs(this.targetVx);
+    if(this.x>W-margin)this.targetVx=-Math.abs(this.targetVx);
+    if(this.y<margin+48)this.targetVy=Math.abs(this.targetVy)*0.5;
+    if(this.y>H-140)this.targetVy=-Math.abs(this.targetVy)*0.5;
+
+    // 마우스 회피
+    const curDist=dist(this.x,this.y,mx,my);
+    if(curDist<70&&!this.chasingFood){
+      const angle=Math.atan2(this.y-my,this.x-mx);
+      const flee = (70-curDist)/70;
+      this.targetVx+=Math.cos(angle)*flee*1.2;
+      this.targetVy+=Math.sin(angle)*flee*0.3;
+      this.tailSpeed=8;
+    } else { this.tailSpeed=lerp(this.tailSpeed,rand(3,6),0.02); }
+    this.vx=lerp(this.vx,this.targetVx,0.03*s);
+    this.vy=lerp(this.vy,this.targetVy,0.03*s);
+    this.x+=this.vx*s; this.y+=this.vy*s;
+    this.x=clamp(this.x,20,W-20); this.y=clamp(this.y,68,H-100);
+    if(Math.abs(this.vx)>0.05)this.dir=this.vx>0?1:-1;
+  }
+
+  draw() {
+    ctx.save();
+    ctx.translate(this.x, this.y);
+
+    // 이름 표시 (호버 또는 생성 직후)
+    if(this.showName || this.nameTimer > 0){
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, this.nameTimer > 0 ? this.nameTimer : 0.8);
+      ctx.fillStyle = 'rgba(10,25,50,0.7)';
+      ctx.font = '10px system-ui';
+      const nameText = `${this.fishName} (${this.ownerName})`;
+      const tw = ctx.measureText(nameText).width;
+      const px = -tw/2, py = -this.actualSize - 18;
+      ctx.beginPath();
+      ctx.roundRect(px-6, py-10, tw+12, 16, 8);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(180,220,255,0.85)';
+      ctx.fillText(nameText, px, py);
+      ctx.restore();
+    }
+
+    ctx.scale(this.dir, 1);
+    ctx.globalAlpha = this.opacity;
+    const sz = this.actualSize;
+    const tw2 = Math.sin(this.tailPhase)*0.3;
+    const fw = Math.sin(this.finPhase)*0.2;
+    const bodyStretch = 1+Math.abs(this.vx)*0.02;
+    ctx.scale(bodyStretch, 1/bodyStretch);
+
+    this.species.draw(ctx, sz, this.palette, tw2, fw, time);
+
+    // 광택
+    const shG = ctx.createRadialGradient(sz*0.1,-sz*0.1,0,sz*0.1,-sz*0.1,sz*0.25);
+    shG.addColorStop(0,'rgba(255,255,255,0.25)');
+    shG.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.fillStyle=shG;
+    ctx.beginPath(); ctx.ellipse(sz*0.1,-sz*0.08,sz*0.2,sz*0.12,-0.2,0,TAU); ctx.fill();
+
+    // 눈
+    const bw = this.species.bodyW||0.5;
+    const eyeX = sz*(bw-0.1);
+    const eyeY = -sz*0.06;
+    const eyeR = sz*0.07;
+    ctx.fillStyle='#FAFAFA';
+    ctx.beginPath(); ctx.ellipse(eyeX,eyeY,eyeR,eyeR*0.95,0,0,TAU); ctx.fill();
+    if(!this.blinking){
+      ctx.fillStyle='#1A1A2E';
+      ctx.beginPath(); ctx.arc(eyeX+1,eyeY,eyeR*0.55,0,TAU); ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,0.8)';
+      ctx.beginPath(); ctx.arc(eyeX+eyeR*0.2,eyeY-eyeR*0.25,eyeR*0.25,0,TAU); ctx.fill();
+    } else {
+      ctx.strokeStyle='#1A1A2E'; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.moveTo(eyeX-eyeR,eyeY); ctx.lineTo(eyeX+eyeR,eyeY); ctx.stroke();
+    }
+
+    // 입
+    const mx2 = sz*(bw+0.05);
+    const my2 = sz*0.04;
+    if(this.mouthOpen>0){
+      ctx.fillStyle='#2A1A3A';
+      ctx.beginPath(); ctx.arc(mx2,my2,sz*0.035,0,TAU); ctx.fill();
+    } else {
+      ctx.strokeStyle='rgba(0,0,0,0.2)'; ctx.lineWidth=0.8;
+      ctx.beginPath(); ctx.moveTo(mx2-sz*0.02,my2);
+      ctx.quadraticCurveTo(mx2,my2+sz*0.02,mx2+sz*0.015,my2);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+}
+
+// ══════════════════════
+// ── 기포, 먹이, 수초, 산호 ──
+// ══════════════════════
+class Bubble {
+  constructor(x,y,size){
+    this.x=x||rand(50,W-50);this.y=y||H+10;this.size=size||rand(2,8);
+    this.speed=rand(0.3,1)*(8/(this.size+2));this.wobblePhase=rand(0,TAU);
+    this.wobbleSpeed=rand(1.5,3);this.wobbleAmp=rand(0.3,1.2);this.opacity=rand(0.3,0.7);this.popped=false;
+  }
+  update(dt){
+    const s=dt*60;this.y-=this.speed*s;this.wobblePhase+=this.wobbleSpeed*dt;
+    this.x+=Math.sin(this.wobblePhase)*this.wobbleAmp;
+    if(this.y<-20)this.popped=true;
+  }
+  draw(){
+    ctx.save();ctx.globalAlpha=this.opacity;
+    const g=ctx.createRadialGradient(this.x-this.size*0.3,this.y-this.size*0.3,0,this.x,this.y,this.size);
+    g.addColorStop(0,'rgba(180,230,255,0.15)');g.addColorStop(0.7,'rgba(120,200,255,0.08)');g.addColorStop(1,'rgba(100,180,255,0.2)');
+    ctx.fillStyle=g;ctx.beginPath();ctx.arc(this.x,this.y,this.size,0,TAU);ctx.fill();
+    ctx.strokeStyle='rgba(160,220,255,0.3)';ctx.lineWidth=0.5;ctx.stroke();
+    ctx.fillStyle='rgba(255,255,255,0.5)';ctx.beginPath();
+    ctx.ellipse(this.x-this.size*0.25,this.y-this.size*0.25,this.size*0.2,this.size*0.15,-0.5,0,TAU);ctx.fill();
+    ctx.restore();
+  }
+}
+
+class Food {
+  constructor(x,y){
+    this.x=x;this.y=y;this.vy=0.3;this.size=rand(2,4);this.wobblePhase=rand(0,TAU);
+    this.eaten=false;this.opacity=1;this.color=pick(['#FFD700','#FFA500','#FF8C42','#E8A87C']);
+  }
+  update(dt){
+    const s=dt*60;this.y+=this.vy*s;this.wobblePhase+=2*dt;this.x+=Math.sin(this.wobblePhase)*0.3;
+    if(this.y>H-80){this.opacity-=0.005*s;if(this.opacity<=0)this.eaten=true;}
+  }
+  draw(){
+    ctx.save();ctx.globalAlpha=this.opacity;ctx.fillStyle=this.color;
+    ctx.beginPath();ctx.arc(this.x,this.y,this.size,0,TAU);ctx.fill();
+    ctx.globalAlpha=this.opacity*0.3;ctx.fillStyle='#FFF';
+    ctx.beginPath();ctx.arc(this.x-this.size*0.2,this.y-this.size*0.3,this.size*0.4,0,TAU);ctx.fill();
+    ctx.restore();
+  }
+}
+
+class Seaweed {
+  constructor(x){
+    this.x=x;this.baseY=H;this.segments=Math.floor(rand(6,14));this.segLen=rand(14,25);
+    this.phase=rand(0,TAU);this.speed=rand(0.5,1.2);this.width=rand(4,10);
+    this.color1=pick(['#1B5E20','#2E7D32','#388E3C','#0D4A0D','#145A32']);
+    this.color2=pick(['#4CAF50','#66BB6A','#81C784','#A5D6A7']);
+    this.z=rand(0.7,1.3);
+  }
+  draw(){
+    ctx.save();ctx.globalAlpha=0.7*clamp(this.z,0.5,1);
+    const pts=[{x:this.x,y:this.baseY}];
+    for(let i=1;i<=this.segments;i++){
+      const t=i/this.segments;
+      const sway=Math.sin(this.phase+time*this.speed+i*0.5)*(15*t);
+      pts.push({x:this.x+sway,y:this.baseY-i*this.segLen});
+    }
+    ctx.beginPath();ctx.moveTo(pts[0].x-this.width/2,pts[0].y);
+    for(let i=1;i<pts.length;i++){const t=i/(pts.length-1);const w=this.width*(1-t*0.6);ctx.lineTo(pts[i].x-w/2,pts[i].y);}
+    for(let i=pts.length-1;i>=0;i--){const t=i/(pts.length-1);const w=this.width*(1-t*0.6);ctx.lineTo(pts[i].x+w/2,pts[i].y);}
+    ctx.closePath();
+    const g=ctx.createLinearGradient(this.x,this.baseY,this.x,this.baseY-this.segments*this.segLen);
+    g.addColorStop(0,this.color1);g.addColorStop(1,this.color2);ctx.fillStyle=g;ctx.fill();
+    ctx.restore();
+  }
+}
+
+class Coral {
+  constructor(x){
+    this.x=x;this.y=H;this.type=Math.floor(rand(0,3));this.size=rand(25,55);
+    this.color=pick(['#FF6B6B','#EE5A24','#F8B500','#6C5CE7','#E056A0','#00B894','#FDA7DF']);
+    this.z=rand(0.7,1.2);
+    this.branches=[];
+    if(this.type===0){for(let i=0;i<7;i++)this.branches.push({angle:-Math.PI/2+(i-3)*0.22,len:this.size*rand(0.7,1)});}
+    else if(this.type===2){for(let i=0;i<5;i++)this.branches.push({bx:(i-2)*this.size*0.25,h:this.size*rand(0.5,1),w:this.size*0.12});}
+  }
+  draw(){
+    ctx.save();ctx.globalAlpha=0.6*clamp(this.z,0.5,1);
+    const sz=this.size;
+    if(this.type===0){
+      for(const b of this.branches){
+        ctx.strokeStyle=this.color;ctx.lineWidth=3;ctx.lineCap='round';
+        ctx.beginPath();ctx.moveTo(this.x,this.y);
+        const ex=this.x+Math.cos(b.angle)*b.len;
+        const ey=this.y+Math.sin(b.angle)*b.len;
+        ctx.lineTo(ex,ey);ctx.stroke();
+        ctx.fillStyle=this.color+'88';
+        ctx.beginPath();ctx.arc(ex,ey,4,0,TAU);ctx.fill();
+      }
+    } else if(this.type===1){
+      ctx.fillStyle=this.color+'BB';
+      ctx.beginPath();ctx.ellipse(this.x,this.y-sz*0.3,sz*0.4,sz*0.3,0,Math.PI,0);ctx.fill();
+      ctx.fillStyle=this.color+'77';
+      ctx.beginPath();ctx.ellipse(this.x-sz*0.15,this.y-sz*0.15,sz*0.25,sz*0.2,0.3,Math.PI,0);ctx.fill();
+    } else {
+      for(const b of this.branches){
+        ctx.fillStyle=this.color+'AA';
+        ctx.beginPath();
+        ctx.roundRect(this.x+b.bx-b.w/2, this.y-b.h, b.w, b.h, [b.w/2,b.w/2,0,0]);
+        ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
+}
+
+// ══════════════════════
+// ── 초기화 ──
+// ══════════════════════
+const fishes = [];
+const bubbles = [];
+const foods = [];
+const seaweeds = [];
+const corals = [];
+
+// 환경 생성
+function initEnvironment() {
+  seaweeds.length = 0;
+  corals.length = 0;
+  for(let i=0;i<Math.floor(W/80);i++) seaweeds.push(new Seaweed(rand(30,W-30)));
+  for(let i=0;i<Math.floor(W/150);i++) corals.push(new Coral(rand(60,W-60)));
+}
+initEnvironment();
+addEventListener('resize', () => { resize(); initEnvironment(); });
+
+// 기포 자동 생성
+setInterval(() => {
+  if(bubbles.length<60) bubbles.push(new Bubble());
+  if(bubbleMode && bubbles.length<120){
+    for(let i=0;i<3;i++) bubbles.push(new Bubble());
+  }
+}, 300);
+
+// ══════════════════════
+// ── 마우스 & 입력 ──
+// ══════════════════════
+addEventListener('mousemove', e => { mx=e.clientX; my=e.clientY; checkFishHover(); });
+addEventListener('touchmove', e => { mx=e.touches[0].clientX; my=e.touches[0].clientY; });
+
+addEventListener('click', e => {
+  // UI 영역 클릭 무시
+  if(e.target.closest('#top-bar,#bottom-bar,#creator-overlay,#my-fish-panel')) return;
+  // 먹이 주기
+  dropFood(e.clientX, e.clientY);
+});
+
+function dropFood(x, y) {
+  foods.push(new Food(x, y));
+  socket.emit('feed', { x, y, ownerName: myName });
+}
+
+function checkFishHover() {
+  for(const f of fishes){
+    const d = dist(f.x, f.y, mx, my);
+    if(d < f.actualSize + 10){
+      f.showName = true;
+      f.nameTimer = 2;
+    }
+  }
+}
+
+addEventListener('keydown', e => {
+  if(e.target.tagName === 'INPUT') return;
+  if(e.key === 'f' || e.key === 'F') dropFood(mx, my);
+  if(e.key === 'b' || e.key === 'B') bubbleMode = !bubbleMode;
+  if(e.key === 'n' || e.key === 'N') nightMode = !nightMode;
+});
+
+// ══════════════════════
+// ── 렌더 루프 ──
+// ══════════════════════
+let lastTime = performance.now();
+
+function drawBackground() {
+  const nightMul = nightMode ? 0.4 : 1;
+
+  // 바다 그라데이션
+  const bg = ctx.createLinearGradient(0,0,0,H);
+  if(nightMode){
+    bg.addColorStop(0,'#010408');bg.addColorStop(0.4,'#020810');
+    bg.addColorStop(0.7,'#030C18');bg.addColorStop(1,'#051020');
+  } else {
+    bg.addColorStop(0,'#020C18');bg.addColorStop(0.3,'#041828');
+    bg.addColorStop(0.6,'#062438');bg.addColorStop(1,'#0A3050');
+  }
+  ctx.fillStyle=bg;
+  ctx.fillRect(0,0,W,H);
+
+  // 빛줄기
+  ctx.save();
+  const lightCount = nightMode ? 2 : 5;
+  for(let i=0;i<lightCount;i++){
+    const lx = W*0.1 + i*(W*0.2) + Math.sin(time*0.3+i)*30;
+    const lw = 40+Math.sin(time*0.5+i*1.5)*15;
+    const lg = ctx.createLinearGradient(lx,0,lx,H*0.7);
+    lg.addColorStop(0,`rgba(100,200,255,${0.04*nightMul})`);
+    lg.addColorStop(1,'rgba(100,200,255,0)');
+    ctx.fillStyle=lg;
+    ctx.beginPath();
+    ctx.moveTo(lx-lw,0);ctx.lineTo(lx+lw,0);
+    ctx.lineTo(lx+lw*1.5,H*0.7);ctx.lineTo(lx-lw*1.5,H*0.7);
+    ctx.closePath();ctx.fill();
+  }
+  ctx.restore();
+
+  // 바닥 모래
+  const sandG = ctx.createLinearGradient(0,H-80,0,H);
+  sandG.addColorStop(0,'rgba(20,40,50,0)');
+  sandG.addColorStop(0.3,nightMode?'rgba(15,25,30,0.8)':'rgba(30,50,60,0.6)');
+  sandG.addColorStop(1,nightMode?'rgba(20,30,35,1)':'rgba(40,65,75,0.9)');
+  ctx.fillStyle=sandG;
+  ctx.fillRect(0,H-80,W,80);
+
+  // 모래 질감
+  ctx.fillStyle = nightMode ? 'rgba(40,55,60,0.3)' : 'rgba(60,85,95,0.25)';
+  for(let i=0;i<W;i+=rand(3,8)){
+    const sy = H-rand(5,65);
+    ctx.beginPath(); ctx.arc(i,sy,rand(0.5,1.5),0,TAU); ctx.fill();
+  }
+}
+
+function animate(now) {
+  requestAnimationFrame(animate);
+  const dt = Math.min((now-lastTime)/1000, 0.05);
+  lastTime = now;
+  time += dt;
+  frameCount++;
+
+  drawBackground();
+
+  // 수초 & 산호
+  for(const sw of seaweeds) sw.draw();
+  for(const co of corals) co.draw();
+
+  // 먹이
+  for(let i=foods.length-1;i>=0;i--){
+    foods[i].update(dt);
+    if(foods[i].eaten) foods.splice(i,1);
+    else foods[i].draw();
+  }
+
+  // 물고기
+  for(const f of fishes){ f.update(dt); }
+  // z 기반 정렬
+  fishes.sort((a,b) => a.z - b.z);
+  for(const f of fishes){ f.draw(); }
+
+  // 기포
+  for(let i=bubbles.length-1;i>=0;i--){
+    bubbles[i].update(dt);
+    if(bubbles[i].popped) bubbles.splice(i,1);
+    else bubbles[i].draw();
+  }
+
+  // 수면 효과
+  ctx.save();
+  ctx.globalAlpha = nightMode ? 0.02 : 0.05;
+  for(let i=0;i<3;i++){
+    const y = 48 + i*3 + Math.sin(time*0.8+i)*2;
+    ctx.strokeStyle = 'rgba(120,200,255,0.5)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for(let x=0;x<W;x+=10){
+      ctx.lineTo(x, y + Math.sin(x*0.02+time*1.5+i)*3);
+    }
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // UI 업데이트
+  document.getElementById('fish-total').textContent = fishes.length;
+}
+
+requestAnimationFrame(animate);
+
+// ══════════════════════
+// ── 소켓 이벤트 ──
+// ══════════════════════
+let myName = localStorage.getItem('aquarium-name') || '';
+
+socket.on('connect', () => {
+  document.getElementById('online-count').textContent = '1';
+});
+
+socket.on('onlineCount', (count) => {
+  document.getElementById('online-count').textContent = count;
+});
+
+socket.on('init', (fishList) => {
+  for(const data of fishList) {
+    const fish = new Fish(data);
+    fish.nameTimer = 3;
+    fish.showName = true;
+    fishes.push(fish);
+  }
+  updateMyFishList();
+});
+
+socket.on('fishAdded', (data) => {
+  // 이미 있는지 확인
+  if(fishes.find(f => f.id === data.id)) return;
+  const fish = new Fish(data);
+  fish.nameTimer = 4;
+  fish.showName = true;
+  fishes.push(fish);
+  if(data.ownerId !== socket.id) {
+    showToast(`${data.ownerName}님이 "${data.name}" 을(를) 수조에 넣었습니다!`);
+  }
+  updateMyFishList();
+});
+
+socket.on('fishRemoved', (fishId) => {
+  const idx = fishes.findIndex(f => f.id === fishId);
+  if(idx >= 0) fishes.splice(idx, 1);
+  updateMyFishList();
+});
+
+socket.on('foodDropped', (data) => {
+  // 다른 사람이 준 먹이
+  if(!foods.find(f => f.x === data.x && f.y === data.y)){
+    foods.push(new Food(data.x, data.y));
+  }
+});
+
+// 접속자 수 업데이트 (간단 구현)
+socket.io.on('reconnect', () => {});
+
+// ══════════════════════
+// ── 물고기 만들기 UI ──
+// ══════════════════════
+const creatorOverlay = document.getElementById('creator-overlay');
+const speciesGrid = document.getElementById('species-grid');
+const previewCanvas = document.getElementById('preview-canvas');
+const previewCtx = previewCanvas.getContext('2d');
+let selectedSpecies = 0;
+
+// 종 선택 카드 생성
+SPECIES.forEach((sp, idx) => {
+  const card = document.createElement('div');
+  card.className = 'species-card' + (idx===0?' selected':'');
+  const miniCv = document.createElement('canvas');
+  miniCv.width = 64; miniCv.height = 48;
+  card.appendChild(miniCv);
+  const nameEl = document.createElement('div');
+  nameEl.className = 'name';
+  nameEl.textContent = sp.name;
+  card.appendChild(nameEl);
+  card.addEventListener('click', () => {
+    document.querySelectorAll('.species-card').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+    selectedSpecies = idx;
+    // 기본 색상 세팅
+    const dc = sp.defaultColors;
+    document.getElementById('color-body').value = dc.body.slice(0,7);
+    document.getElementById('color-fin').value = dc.fin.slice(0,7);
+    document.getElementById('color-belly').value = dc.belly.slice(0,7);
+    document.getElementById('color-accent').value = (dc.accent||'#FFFFFF').slice(0,7);
+    updatePreview();
+  });
+  speciesGrid.appendChild(card);
+
+  // 미니 캔버스에 물고기 그리기
+  const mCtx = miniCv.getContext('2d');
+  mCtx.save();
+  mCtx.translate(36, 24);
+  mCtx.scale(1, 1);
+  mCtx.globalAlpha = 0.9;
+  const sz = 20;
+  sp.draw(mCtx, sz, sp.defaultColors, 0, 0, 0);
+  // 눈
+  const bw = sp.bodyW||0.5;
+  const eyeX = sz*(bw-0.1), eyeY = -sz*0.06, eyeR = sz*0.07;
+  mCtx.fillStyle='#FAFAFA';
+  mCtx.beginPath(); mCtx.ellipse(eyeX,eyeY,eyeR,eyeR*0.95,0,0,TAU); mCtx.fill();
+  mCtx.fillStyle='#1A1A2E';
+  mCtx.beginPath(); mCtx.arc(eyeX+1,eyeY,eyeR*0.55,0,TAU); mCtx.fill();
+  mCtx.restore();
+});
+
+function getCustomColors() {
+  return {
+    body: document.getElementById('color-body').value,
+    fin: document.getElementById('color-fin').value,
+    belly: document.getElementById('color-belly').value,
+    accent: document.getElementById('color-accent').value
+  };
+}
+
+function updatePreview() {
+  const pCtx = previewCtx;
+  const pw = 220, ph = 180;
+  pCtx.clearRect(0,0,pw,ph);
+  // 배경
+  const bg = pCtx.createLinearGradient(0,0,0,ph);
+  bg.addColorStop(0,'#041828');bg.addColorStop(1,'#0A3050');
+  pCtx.fillStyle=bg;pCtx.fillRect(0,0,pw,ph);
+
+  pCtx.save();
+  pCtx.translate(pw/2, ph/2);
+  pCtx.globalAlpha = 0.95;
+  const sp = SPECIES[selectedSpecies];
+  const sz = 40;
+  const colors = getCustomColors();
+  const t = time;
+  const tw = Math.sin(t*4)*0.3;
+  const fw = Math.sin(t*3)*0.2;
+  sp.draw(pCtx, sz, colors, tw, fw, t);
+  // 눈
+  const bw = sp.bodyW||0.5;
+  const eyeX = sz*(bw-0.1), eyeY = -sz*0.06, eyeR = sz*0.07;
+  pCtx.fillStyle='#FAFAFA';
+  pCtx.beginPath(); pCtx.ellipse(eyeX,eyeY,eyeR,eyeR*0.95,0,0,TAU); pCtx.fill();
+  pCtx.fillStyle='#1A1A2E';
+  pCtx.beginPath(); pCtx.arc(eyeX+1,eyeY,eyeR*0.55,0,TAU); pCtx.fill();
+  pCtx.fillStyle='rgba(255,255,255,0.8)';
+  pCtx.beginPath(); pCtx.arc(eyeX+eyeR*0.2,eyeY-eyeR*0.25,eyeR*0.25,0,TAU); pCtx.fill();
+  pCtx.restore();
+
+  // 종 이름 업데이트
+  document.getElementById('preview-species-name').textContent = sp.name;
+}
+
+// 프리뷰 애니메이션
+setInterval(updatePreview, 50);
+
+// 색상 변경 시 프리뷰 업데이트
+document.querySelectorAll('.color-pick input').forEach(el => {
+  el.addEventListener('input', updatePreview);
+});
+
+// 버튼 이벤트
+document.getElementById('btn-create').addEventListener('click', () => {
+  creatorOverlay.classList.add('open');
+  if(myName) document.getElementById('input-owner').value = myName;
+  // 기본 색상 세팅
+  const dc = SPECIES[selectedSpecies].defaultColors;
+  document.getElementById('color-body').value = dc.body.slice(0,7);
+  document.getElementById('color-fin').value = dc.fin.slice(0,7);
+  document.getElementById('color-belly').value = dc.belly.slice(0,7);
+  document.getElementById('color-accent').value = (dc.accent||'#FFFFFF').slice(0,7);
+});
+
+document.getElementById('btn-cancel').addEventListener('click', () => {
+  creatorOverlay.classList.remove('open');
+});
+
+creatorOverlay.addEventListener('click', (e) => {
+  if(e.target === creatorOverlay || e.target === document.getElementById('creator-wrapper') && !e.target.closest('#creator,#preview-side')) creatorOverlay.classList.remove('open');
+});
+
+document.getElementById('btn-submit').addEventListener('click', () => {
+  const ownerName = document.getElementById('input-owner').value.trim() || '익명';
+  const fishName = document.getElementById('input-fishname').value.trim() || SPECIES[selectedSpecies].name;
+  myName = ownerName;
+  localStorage.setItem('aquarium-name', myName);
+
+  socket.emit('addFish', {
+    ownerName,
+    name: fishName,
+    speciesIdx: selectedSpecies,
+    customColors: getCustomColors(),
+    x: rand(100, W-100),
+    y: rand(120, H-200),
+    dir: Math.random()>0.5?1:-1
+  });
+
+  creatorOverlay.classList.remove('open');
+  document.getElementById('input-fishname').value = '';
+  showToast(`"${fishName}" 을(를) 수조에 넣었습니다!`);
+});
+
+document.getElementById('btn-feed').addEventListener('click', () => dropFood(W/2+rand(-100,100), 80));
+document.getElementById('btn-bubble').addEventListener('click', () => {
+  bubbleMode = !bubbleMode;
+  document.getElementById('btn-bubble').classList.toggle('active', bubbleMode);
+});
+document.getElementById('btn-night').addEventListener('click', () => {
+  nightMode = !nightMode;
+  document.getElementById('btn-night').classList.toggle('active', nightMode);
+});
+
+// 내 물고기 패널
+const myFishPanel = document.getElementById('my-fish-panel');
+document.getElementById('btn-my-fish').addEventListener('click', () => {
+  myFishPanel.classList.toggle('open');
+});
+
+function updateMyFishList() {
+  const list = document.getElementById('my-fish-list');
+  const myFish = fishes.filter(f => f.ownerId === socket.id);
+  list.innerHTML = '';
+  if(myFish.length === 0){
+    list.innerHTML = '<div style="color:rgba(140,200,255,0.3);font-size:11px;text-align:center;padding:20px">아직 물고기가 없습니다</div>';
+    return;
+  }
+  for(const f of myFish){
+    const item = document.createElement('div');
+    item.className = 'my-fish-item';
+    item.innerHTML = `
+      <span class="fname">${f.fishName}</span>
+      <button class="remove-btn" data-id="${f.id}">회수</button>
+    `;
+    item.querySelector('.remove-btn').addEventListener('click', () => {
+      socket.emit('removeFish', f.id);
+    });
+    list.appendChild(item);
+  }
+}
+
+// 토스트 알림
+function showToast(msg) {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.textContent = msg;
+  container.appendChild(toast);
+  setTimeout(() => toast.remove(), 3000);
+}
+</script>
+</body>
+</html>
