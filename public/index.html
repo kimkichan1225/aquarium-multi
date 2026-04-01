@@ -11,12 +11,15 @@
 
   /* 상단 바 */
   #top-bar{
-    position:fixed;top:0;left:0;right:0;height:48px;
-    background:rgba(5,15,35,0.85);backdrop-filter:blur(12px);
-    border-bottom:1px solid rgba(100,180,255,0.1);
+    position:fixed;top:0;left:0;right:0;height:40px;
+    background:transparent;
+    border-bottom:none;
     display:flex;align-items:center;justify-content:space-between;
-    padding:0 20px;z-index:200;
+    padding:0 16px;z-index:200;pointer-events:none;
+    opacity:0.5;transition:opacity 0.4s;
   }
+  #top-bar:hover{opacity:1}
+  #top-bar>*{pointer-events:auto}
   #top-bar h1{
     color:rgba(140,200,255,0.8);font-size:15px;font-weight:500;
     letter-spacing:2px;
@@ -29,12 +32,15 @@
 
   /* 하단 컨트롤 */
   #bottom-bar{
-    position:fixed;bottom:0;left:0;right:0;height:52px;
-    background:rgba(5,15,35,0.85);backdrop-filter:blur(12px);
-    border-top:1px solid rgba(100,180,255,0.1);
-    display:flex;align-items:center;justify-content:center;gap:8px;
-    padding:0 16px;z-index:200;
+    position:fixed;bottom:0;left:0;right:0;height:44px;
+    background:transparent;
+    border-top:none;
+    display:flex;align-items:center;justify-content:center;gap:6px;
+    padding:0 12px;z-index:200;pointer-events:none;
+    opacity:0;transition:opacity 0.4s;
   }
+  body:hover #bottom-bar{opacity:1}
+  #bottom-bar>*{pointer-events:auto}
   .btn{
     background:rgba(60,140,200,0.1);backdrop-filter:blur(6px);
     border:1px solid rgba(100,180,255,0.12);border-radius:999px;
@@ -216,6 +222,7 @@
   <button class="btn" id="btn-random">야생 물고기 (A)</button>
   <button class="btn" id="btn-jelly">해파리 (J)</button>
   <button class="btn" id="btn-bubble">기포 (B)</button>
+  <button class="btn" id="btn-theme">테마: 산호초 (T)</button>
   <button class="btn" id="btn-night">야간모드 (N)</button>
 </div>
 
@@ -324,6 +331,60 @@ let nightMode = false;
 let bubbleMode = false;
 let time = 0;
 let frameCount = 0;
+let currentTheme = 1;
+
+const THEMES = [
+  {
+    name: '기본',
+    sky: ['#020C18','#041828','#062438','#0A3050'],
+    night: ['#010408','#020810','#030C18','#051020'],
+    light: 'rgba(100,200,255,',
+    sand: ['rgba(30,50,60,0.6)','rgba(40,65,75,0.9)'],
+    sandNight: ['rgba(15,25,30,0.8)','rgba(20,30,35,1)'],
+    sandTex: 'rgba(60,85,95,0.25)',
+    sandTexNight: 'rgba(40,55,60,0.3)',
+  },
+  {
+    name: '산호초',
+    sky: ['#021A2E','#053555','#0C5070','#18708A'],
+    night: ['#010D18','#021828','#042838','#083848'],
+    light: 'rgba(140,230,220,',
+    sand: ['rgba(60,50,35,0.6)','rgba(90,75,55,0.9)'],
+    sandNight: ['rgba(25,22,18,0.8)','rgba(35,30,22,1)'],
+    sandTex: 'rgba(100,85,65,0.3)',
+    sandTexNight: 'rgba(50,42,32,0.3)',
+  },
+  {
+    name: '심해',
+    sky: ['#000208','#010410','#020618','#030820'],
+    night: ['#000105','#000208','#010310','#010418'],
+    light: 'rgba(60,100,180,',
+    sand: ['rgba(15,20,30,0.7)','rgba(20,25,35,0.95)'],
+    sandNight: ['rgba(8,10,18,0.8)','rgba(12,15,22,1)'],
+    sandTex: 'rgba(30,35,50,0.3)',
+    sandTexNight: 'rgba(18,22,35,0.3)',
+  },
+  {
+    name: '열대',
+    sky: ['#042838','#086068','#0A8878','#15A888'],
+    night: ['#021418','#042828','#053838','#084040'],
+    light: 'rgba(180,255,220,',
+    sand: ['rgba(70,60,40,0.5)','rgba(110,95,65,0.85)'],
+    sandNight: ['rgba(30,25,18,0.7)','rgba(45,38,25,0.9)'],
+    sandTex: 'rgba(120,105,75,0.25)',
+    sandTexNight: 'rgba(55,48,35,0.25)',
+  },
+  {
+    name: '석양',
+    sky: ['#1A0A18','#2E1530','#4A2040','#6A3048'],
+    night: ['#0A0510','#150A18','#1E1020','#281828'],
+    light: 'rgba(255,150,100,',
+    sand: ['rgba(50,30,25,0.6)','rgba(70,45,35,0.9)'],
+    sandNight: ['rgba(25,15,12,0.8)','rgba(35,20,15,1)'],
+    sandTex: 'rgba(80,55,45,0.25)',
+    sandTexNight: 'rgba(45,30,25,0.3)',
+  },
+];
 const FOOD_SEARCH_INTERVAL = 8;
 
 // ══════════════════════════════════════════════
@@ -998,7 +1059,7 @@ class Fish {
       const margin=80;
       if(this.x<margin)this.targetVx=Math.abs(this.targetVx);
       if(this.x>W-margin)this.targetVx=-Math.abs(this.targetVx);
-      if(this.y<margin+48)this.targetVy=Math.abs(this.targetVy)*0.5;
+      if(this.y<margin)this.targetVy=Math.abs(this.targetVy)*0.5;
       if(this.y>H-140)this.targetVy=-Math.abs(this.targetVy)*0.5;
 
       // 마우스 회피
@@ -1013,7 +1074,7 @@ class Fish {
       this.vx=lerp(this.vx,this.targetVx,0.03*s);
       this.vy=lerp(this.vy,this.targetVy,0.03*s);
       this.x+=this.vx*s; this.y+=this.vy*s;
-      this.x=clamp(this.x,20,W-20); this.y=clamp(this.y,68,H-100);
+      this.x=clamp(this.x,20,W-20); this.y=clamp(this.y,20,H-80);
       if(Math.abs(this.vx)>0.05)this.dir=this.vx>0?1:-1;
     }
   }
@@ -1365,6 +1426,7 @@ addEventListener('keydown', e => {
   if(e.key === 'f' || e.key === 'F') dropFood(mx, my);
   if(e.key === 'a' || e.key === 'A') spawnRandomFish();
   if(e.key === 'j' || e.key === 'J') spawnRandomJellyfish();
+  if(e.key === 't' || e.key === 'T') cycleTheme();
   if(e.key === 'b' || e.key === 'B') bubbleMode = !bubbleMode;
   if(e.key === 'n' || e.key === 'N') nightMode = !nightMode;
 });
@@ -1375,17 +1437,16 @@ addEventListener('keydown', e => {
 let lastTime = performance.now();
 
 function drawBackground() {
+  const th = THEMES[currentTheme];
   const nightMul = nightMode ? 0.4 : 1;
+  const colors = nightMode ? th.night : th.sky;
 
   // 바다 그라데이션
   const bg = ctx.createLinearGradient(0,0,0,H);
-  if(nightMode){
-    bg.addColorStop(0,'#010408');bg.addColorStop(0.4,'#020810');
-    bg.addColorStop(0.7,'#030C18');bg.addColorStop(1,'#051020');
-  } else {
-    bg.addColorStop(0,'#020C18');bg.addColorStop(0.3,'#041828');
-    bg.addColorStop(0.6,'#062438');bg.addColorStop(1,'#0A3050');
-  }
+  bg.addColorStop(0, colors[0]);
+  bg.addColorStop(0.33, colors[1]);
+  bg.addColorStop(0.66, colors[2]);
+  bg.addColorStop(1, colors[3]);
   ctx.fillStyle=bg;
   ctx.fillRect(0,0,W,H);
 
@@ -1396,8 +1457,8 @@ function drawBackground() {
     const lx = W*0.1 + i*(W*0.2) + Math.sin(time*0.3+i)*30;
     const lw = 40+Math.sin(time*0.5+i*1.5)*15;
     const lg = ctx.createLinearGradient(lx,0,lx,H*0.7);
-    lg.addColorStop(0,`rgba(100,200,255,${0.04*nightMul})`);
-    lg.addColorStop(1,'rgba(100,200,255,0)');
+    lg.addColorStop(0, th.light + (0.04*nightMul) + ')');
+    lg.addColorStop(1, th.light + '0)');
     ctx.fillStyle=lg;
     ctx.beginPath();
     ctx.moveTo(lx-lw,0);ctx.lineTo(lx+lw,0);
@@ -1406,16 +1467,51 @@ function drawBackground() {
   }
   ctx.restore();
 
+  // 심해 테마: 생물발광 파티클
+  if(currentTheme === 2) {
+    ctx.save();
+    for(let i = 0; i < 15; i++) {
+      const px = (Math.sin(time*0.2 + i*2.3) * 0.5 + 0.5) * W;
+      const py = (Math.cos(time*0.15 + i*1.7) * 0.5 + 0.5) * H * 0.8;
+      const pr = 1.5 + Math.sin(time*2 + i) * 0.8;
+      const alpha = 0.15 + Math.sin(time*1.5 + i*0.9) * 0.1;
+      const colors2 = ['80,140,255','100,255,200','200,100,255','255,180,80'];
+      const c = colors2[i % 4];
+      ctx.fillStyle = `rgba(${c},${alpha * nightMul})`;
+      ctx.beginPath(); ctx.arc(px, py, pr, 0, TAU); ctx.fill();
+      // 글로우
+      const gg = ctx.createRadialGradient(px,py,0,px,py,pr*6);
+      gg.addColorStop(0, `rgba(${c},${alpha*0.3*nightMul})`);
+      gg.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = gg;
+      ctx.beginPath(); ctx.arc(px, py, pr*6, 0, TAU); ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // 석양 테마: 상단에 따뜻한 빛
+  if(currentTheme === 4) {
+    ctx.save();
+    const sunG = ctx.createRadialGradient(W*0.7, 0, 0, W*0.7, 0, H*0.5);
+    sunG.addColorStop(0, `rgba(255,120,60,${0.08*nightMul})`);
+    sunG.addColorStop(0.5, `rgba(255,80,40,${0.03*nightMul})`);
+    sunG.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = sunG;
+    ctx.fillRect(0,0,W,H);
+    ctx.restore();
+  }
+
   // 바닥 모래
+  const sandColors = nightMode ? th.sandNight : th.sand;
   const sandG = ctx.createLinearGradient(0,H-80,0,H);
   sandG.addColorStop(0,'rgba(20,40,50,0)');
-  sandG.addColorStop(0.3,nightMode?'rgba(15,25,30,0.8)':'rgba(30,50,60,0.6)');
-  sandG.addColorStop(1,nightMode?'rgba(20,30,35,1)':'rgba(40,65,75,0.9)');
+  sandG.addColorStop(0.3, sandColors[0]);
+  sandG.addColorStop(1, sandColors[1]);
   ctx.fillStyle=sandG;
   ctx.fillRect(0,H-80,W,80);
 
   // 모래 질감
-  ctx.fillStyle = nightMode ? 'rgba(40,55,60,0.3)' : 'rgba(60,85,95,0.25)';
+  ctx.fillStyle = nightMode ? th.sandTexNight : th.sandTex;
   for(let i=0;i<W;i+=rand(3,8)){
     const sy = H-rand(5,65);
     ctx.beginPath(); ctx.arc(i,sy,rand(0.5,1.5),0,TAU); ctx.fill();
@@ -1745,6 +1841,11 @@ document.getElementById('btn-bubble').addEventListener('click', () => {
   bubbleMode = !bubbleMode;
   document.getElementById('btn-bubble').classList.toggle('active', bubbleMode);
 });
+function cycleTheme() {
+  currentTheme = (currentTheme + 1) % THEMES.length;
+  document.getElementById('btn-theme').textContent = `테마: ${THEMES[currentTheme].name} (T)`;
+}
+document.getElementById('btn-theme').addEventListener('click', cycleTheme);
 document.getElementById('btn-night').addEventListener('click', () => {
   nightMode = !nightMode;
   document.getElementById('btn-night').classList.toggle('active', nightMode);
