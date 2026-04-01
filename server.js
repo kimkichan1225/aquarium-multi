@@ -47,10 +47,13 @@ async function initDB() {
 // ── REST API: 회원가입/로그인 ──
 app.post('/api/register', async (req, res) => {
   const { nickname, password } = req.body;
-  if (!nickname || !password) return res.json({ ok: false, msg: '닉네임과 비밀번호를 입력하세요' });
+  if (!nickname || !password) return res.json({ ok: false, msg: '닉네임과 PIN을 입력하세요' });
   if (nickname.length > 20) return res.json({ ok: false, msg: '닉네임은 20자 이하' });
-  if (!/^\d{4,8}$/.test(password)) return res.json({ ok: false, msg: '비밀번호는 4~8자리 숫자' });
+  if (!/^\d{4,8}$/.test(password)) return res.json({ ok: false, msg: 'PIN은 4~8자리 숫자' });
   try {
+    // PIN 중복 체크
+    const dup = await pool.query('SELECT id FROM users WHERE password = $1', [password]);
+    if (dup.rows.length > 0) return res.json({ ok: false, msg: '이미 사용 중인 PIN 번호입니다' });
     await pool.query('INSERT INTO users (nickname, password) VALUES ($1, $2)', [nickname, password]);
     res.json({ ok: true, nickname });
   } catch (e) {
@@ -60,10 +63,10 @@ app.post('/api/register', async (req, res) => {
 });
 
 app.post('/api/login', async (req, res) => {
-  const { nickname, password } = req.body;
-  if (!nickname || !password) return res.json({ ok: false, msg: '닉네임과 비밀번호를 입력하세요' });
-  const result = await pool.query('SELECT * FROM users WHERE nickname = $1 AND password = $2', [nickname, password]);
-  if (result.rows.length === 0) return res.json({ ok: false, msg: '닉네임 또는 비밀번호가 틀립니다' });
+  const { password } = req.body;
+  if (!password) return res.json({ ok: false, msg: 'PIN 번호를 입력하세요' });
+  const result = await pool.query('SELECT * FROM users WHERE password = $1', [password]);
+  if (result.rows.length === 0) return res.json({ ok: false, msg: '등록되지 않은 PIN 번호입니다' });
   res.json({ ok: true, nickname: result.rows[0].nickname });
 });
 

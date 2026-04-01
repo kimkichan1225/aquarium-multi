@@ -277,22 +277,21 @@
   <div id="login-box">
     <h2>MULTI AQUARIUM</h2>
     <div class="subtitle">나만의 물고기를 만들어 공유 수조에 넣자</div>
-    <input type="text" id="login-nick" placeholder="닉네임" maxlength="20">
-    <input type="password" id="login-pw" placeholder="비밀번호" maxlength="8" inputmode="numeric">
+    <input type="password" id="login-pw" placeholder="PIN 번호 입력" maxlength="8" inputmode="numeric" style="text-align:center;font-size:18px;letter-spacing:8px">
     <button class="btn primary" id="btn-login" style="width:100%;margin-top:4px">로그인</button>
     <div id="login-msg"></div>
     <div id="login-to-register" style="color:rgba(140,200,255,0.4);font-size:11px;margin-top:14px;cursor:pointer">
-      계정이 없으신가요? <span style="color:rgba(140,200,255,0.7);text-decoration:underline">회원가입</span>
+      처음이신가요? <span style="color:rgba(140,200,255,0.7);text-decoration:underline">회원가입</span>
     </div>
     <div id="login-skip">비회원으로 구경하기</div>
   </div>
   <!-- 회원가입 화면 -->
   <div id="register-box" style="display:none">
     <h2>회원가입</h2>
-    <div class="subtitle">닉네임과 비밀번호를 설정하세요</div>
-    <input type="text" id="reg-nick" placeholder="사용할 닉네임" maxlength="20">
-    <input type="password" id="reg-pw" placeholder="비밀번호 (4~8자리 숫자)" maxlength="8" inputmode="numeric">
-    <input type="password" id="reg-pw2" placeholder="비밀번호 확인" maxlength="8" inputmode="numeric">
+    <div class="subtitle">닉네임과 PIN 번호를 설정하세요</div>
+    <input type="text" id="reg-nick" placeholder="닉네임" maxlength="20">
+    <input type="password" id="reg-pw" placeholder="PIN 번호 (4~8자리 숫자)" maxlength="8" inputmode="numeric" style="text-align:center;font-size:18px;letter-spacing:8px">
+    <input type="password" id="reg-pw2" placeholder="PIN 번호 확인" maxlength="8" inputmode="numeric" style="text-align:center;font-size:18px;letter-spacing:8px">
     <button class="btn primary" id="btn-register" style="width:100%;margin-top:4px">가입하기</button>
     <div id="reg-msg"></div>
     <div id="reg-to-login" style="color:rgba(140,200,255,0.4);font-size:11px;margin-top:14px;cursor:pointer">
@@ -1741,15 +1740,14 @@ document.getElementById('reg-to-login').addEventListener('click', () => {
   regMsg.textContent = '';
 });
 
-// 로그인
+// 로그인 (PIN만)
 document.getElementById('btn-login').addEventListener('click', async () => {
-  const nick = document.getElementById('login-nick').value.trim();
   const pw = document.getElementById('login-pw').value.trim();
   loginMsg.className = ''; loginMsg.textContent = '';
-  if(!nick || !pw) { loginMsg.textContent = '닉네임과 비밀번호를 입력하세요'; return; }
+  if(!pw) { loginMsg.textContent = 'PIN 번호를 입력하세요'; return; }
   const res = await fetch('/api/login', {
     method: 'POST', headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ nickname: nick, password: pw })
+    body: JSON.stringify({ password: pw })
   });
   const data = await res.json();
   if(data.ok) {
@@ -1788,7 +1786,6 @@ document.getElementById('btn-register').addEventListener('click', async () => {
     setTimeout(() => {
       registerBox.style.display = 'none';
       loginBox.style.display = 'block';
-      document.getElementById('login-nick').value = nick;
       document.getElementById('login-pw').value = '';
       regMsg.textContent = '';
     }, 1200);
