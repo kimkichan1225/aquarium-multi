@@ -1890,8 +1890,8 @@ socket.on('fishPositions', (updates) => {
   for(const u of updates) {
     const fish = fishes.find(f => f.id === u.id);
     if(fish && fish.ownerId !== myUid) {
-      fish.remoteX = u.x;
-      fish.remoteY = u.y;
+      fish.remoteX = u.x * W;
+      fish.remoteY = u.y * H;
       fish.dir = u.dir;
     }
   }
@@ -2196,7 +2196,7 @@ function updateMyFishList() {
 setInterval(() => {
   const myFish = fishes.filter(f => f.ownerId === myUid && !f.dying && !f.dead);
   if(myFish.length === 0) return;
-  socket.emit('fishPositions', myFish.map(f => ({ id: f.id, x: f.x, y: f.y, dir: f.dir })));
+  socket.emit('fishPositions', myFish.map(f => ({ id: f.id, x: f.x/W, y: f.y/H, dir: f.dir })));
 }, 150);
 
 // 토스트 알림
