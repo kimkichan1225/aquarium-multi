@@ -1628,20 +1628,14 @@ class Fish {
       if(this.dyingProgress >= 1) this.dead = true;
     }
 
-    // 다른 유저 소유 물고기: dead reckoning + lerp (AI 비활성)
+    // 다른 유저 소유 물고기: 수신 위치로 lerp (AI 비활성)
     // 3초 이상 업데이트 없으면 자체 AI로 전환
     if(this.ownerId !== myUid && this.remoteX != null) {
-      const msSince = this.lastRemoteUpdate ? Date.now() - this.lastRemoteUpdate : 9999;
-      if(msSince > 3000) {
+      if(this.lastRemoteUpdate && (Date.now() - this.lastRemoteUpdate > 3000)) {
         this.remoteX = null; this.remoteY = null;
-        this.remoteVx = 0; this.remoteVy = 0;
       } else {
-        // 마지막 수신 속도로 위치 예측 후 lerp
-        const predT = Math.min(msSince / 1000, 0.5);
-        const predX = this.remoteX + (this.remoteVx || 0) * predT;
-        const predY = this.remoteY + (this.remoteVy || 0) * predT;
-        this.x = lerp(this.x, predX, 0.2 * s);
-        this.y = lerp(this.y, predY, 0.2 * s);
+        this.x = lerp(this.x, this.remoteX, 0.18 * s);
+        this.y = lerp(this.y, this.remoteY, 0.18 * s);
         return;
       }
     }
@@ -2460,19 +2454,8 @@ socket.on('fishPositions', (updates) => {
   for(const u of updates) {
     const fish = fishById.get(u.id);
     if(fish && fish.ownerId !== myUid) {
-      const nx = u.x * W, ny = u.y * H;
-      // 이전 업데이트 기준 속도 계산 (dead reckoning용)
-      if(fish.remoteX != null && fish.lastRemoteUpdate) {
-        const dt = (now - fish.lastRemoteUpdate) / 1000;
-        if(dt > 0 && dt < 2) {
-          fish.remoteVx = (nx - fish.remoteX) / dt;
-          fish.remoteVy = (ny - fish.remoteY) / dt;
-        }
-      } else {
-        fish.remoteVx = 0; fish.remoteVy = 0;
-      }
-      fish.remoteX = nx;
-      fish.remoteY = ny;
+      fish.remoteX = u.x * W;
+      fish.remoteY = u.y * H;
       fish.dir = u.dir;
       fish.lastRemoteUpdate = now;
     }
