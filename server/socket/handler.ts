@@ -279,6 +279,18 @@ function registerSocketHandlers(io: Server): void {
       io.to(room).emit('chatMessage', chatMsg);
     });
 
+    // 초대장 전송 (로비 전체에 브로드캐스트)
+    socket.on('sendInvite', (data: { name?: string }) => {
+      const name = (data?.name || '익명').slice(0, 20);
+      // 도배 방지 (10초에 1회)
+      const now = Date.now();
+      const lastInvite = chatRateLimit.get(`invite:${socket.id}`) || 0;
+      if (now - lastInvite < 10000) return;
+      chatRateLimit.set(`invite:${socket.id}`, now);
+      io.to('lobby').emit('inviteCard', { name, time: now });
+      console.log(`초대장: ${name}`);
+    });
+
     // 마우스 커서 공유
     socket.on('cursor', (data: CursorData) => {
       const room = getSocketRoom(socket.id);

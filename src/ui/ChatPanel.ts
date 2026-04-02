@@ -85,6 +85,45 @@ export function handleChatHistory(msgs: { name: string; msg: string; time: numbe
   updateChatBadge();
 }
 
+/** 초대 카드 추가 */
+export function addInviteCard(data: { name: string; time: number }): void {
+  const el = document.createElement('div');
+  el.className = 'invite-card';
+
+  const fish = document.createElement('div');
+  fish.className = 'invite-fish';
+  fish.textContent = '🐠';
+
+  const info = document.createElement('div');
+  info.className = 'invite-info';
+  info.innerHTML = `
+    <div class="invite-title">${escapeHtml(data.name)}의 아쿠아리움</div>
+    <div class="invite-sub">${escapeHtml(data.name)}님이 초대합니다</div>
+  `;
+
+  const btn = document.createElement('button');
+  btn.className = 'invite-enter-btn';
+  btn.textContent = '입장하기 →';
+  btn.addEventListener('click', () => {
+    location.hash = `#room/${encodeURIComponent(data.name)}`;
+    chatPanel.classList.remove('open');
+    chatFloatingBtn.style.display = 'flex';
+  });
+
+  el.appendChild(fish);
+  el.appendChild(info);
+  el.appendChild(btn);
+  chatMessages.appendChild(el);
+
+  const isNearBottom = chatMessages.scrollHeight - chatMessages.scrollTop - chatMessages.clientHeight < 60;
+  if (isNearBottom) chatMessages.scrollTop = chatMessages.scrollHeight;
+
+  if (!chatPanel.classList.contains('open')) {
+    chatUnread++;
+    updateChatBadge();
+  }
+}
+
 /** 채팅 전송 */
 function sendChat(): void {
   const msg = chatInput.value.trim();

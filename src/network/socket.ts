@@ -13,7 +13,7 @@ import {
   setFishSortDirty,
 } from '@/engine/FishManager';
 import { foods, remoteCursors } from '@/engine/Renderer';
-import { addChatMessage, handleChatHistory } from '@/ui/ChatPanel';
+import { addChatMessage, handleChatHistory, addInviteCard } from '@/ui/ChatPanel';
 import { updateMyFishList } from '@/ui/MyFishPanel';
 import { rand } from '@/utils/math';
 import type { FishColors } from '@/types';
@@ -99,6 +99,10 @@ export function emitRegister(uid: string): void {
 
 export function emitJoinRoom(roomName: string | null): void {
   socket.emit('joinRoom', roomName);
+}
+
+export function emitSendInvite(name: string): void {
+  socket.emit('sendInvite', { name });
 }
 
 /** 소켓 초기화 */
@@ -221,6 +225,10 @@ export function initSocket(): void {
 
   socket.on('chatMessage', (data: { name: string; msg: string; time: number }) => {
     addChatMessage(data);
+  });
+
+  socket.on('inviteCard', (data: { name: string; time: number }) => {
+    addInviteCard(data);
   });
 
   socket.on('chatHistory', (msgs: { name: string; msg: string; time: number }[]) => {

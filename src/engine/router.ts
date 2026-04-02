@@ -2,11 +2,11 @@
 
 import {
   getCurrentRoom, setCurrentRoom,
-  setIsRoomOwner, setEditMode,
+  setIsRoomOwner, getIsRoomOwner, setEditMode,
   getLoggedNickname, isLoggedIn,
   setCurrentTheme, setNightMode,
 } from '@/state/store';
-import { emitJoinRoom } from '@/network/socket';
+import { emitJoinRoom, emitSendInvite } from '@/network/socket';
 import { getRoom, createRoom } from '@/network/api';
 import { seaweeds, corals, initEnvironment } from './Environment';
 import { getCtx } from './Renderer';
@@ -20,7 +20,15 @@ import { getW, getH } from '@/state/store';
 /** 라우터 초기화 */
 export function initRouter(): void {
   window.addEventListener('hashchange', handleRoute);
-  handleRoute(); // 초기 라우트
+  handleRoute();
+
+  // 초대 버튼
+  document.getElementById('btn-invite')?.addEventListener('click', () => {
+    const nick = getLoggedNickname();
+    if (!nick || !getIsRoomOwner()) return;
+    emitSendInvite(nick);
+    showToast('초대장을 로비 채팅에 보냈습니다 🐠');
+  });
 }
 
 /** 해시 변경 처리 */
@@ -83,6 +91,8 @@ async function enterRoom(nickname: string): Promise<void> {
   if (roomInfo) roomInfo.style.display = 'flex';
   if (roomName) roomName.textContent = `${nickname}의 방`;
   if (btnEditRoom) btnEditRoom.style.display = owner ? 'inline-block' : 'none';
+  const btnInvite = document.getElementById('btn-invite');
+  if (btnInvite) btnInvite.style.display = owner ? 'inline-block' : 'none';
   if (titleEl) titleEl.textContent = `${nickname}의 아쿠아리움`;
   document.getElementById('top-bar')?.classList.add('in-room');
 
@@ -131,6 +141,8 @@ function enterLobby(): void {
   const titleEl = document.querySelector('#top-bar h1') as HTMLElement;
 
   if (roomInfo) roomInfo.style.display = 'none';
+  const btnInviteEl = document.getElementById('btn-invite');
+  if (btnInviteEl) btnInviteEl.style.display = 'none';
   if (titleEl) titleEl.textContent = 'MULTI AQUARIUM';
   document.getElementById('top-bar')?.classList.remove('in-room');
 
