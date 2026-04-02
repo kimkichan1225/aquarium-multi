@@ -287,7 +287,15 @@ body:hover #bottom-bar{opacity:1}
 #chat-messages::-webkit-scrollbar-thumb{background:rgba(100,180,255,0.15);border-radius:2px}
 .chat-msg{
   padding:4px 0;font-size:11px;line-height:1.4;word-break:break-word;
+  display:flex;align-items:baseline;gap:0;position:relative;
 }
+.chat-msg:hover .chat-delete-btn{opacity:1}
+.chat-delete-btn{
+  margin-left:auto;padding:0 4px;background:none;border:none;
+  color:rgba(255,100,100,0.4);font-size:13px;cursor:pointer;
+  opacity:0;transition:opacity 0.15s;line-height:1;flex-shrink:0;
+}
+.chat-delete-btn:hover{color:rgba(255,100,100,0.9)}
 .chat-msg .chat-name{
   color:rgba(100,220,180,0.8);font-weight:600;margin-right:6px;
 }

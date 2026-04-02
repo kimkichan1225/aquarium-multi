@@ -1,7 +1,7 @@
 // ── 채팅 패널 ──
 
 import { getMyName } from '@/state/store';
-import { emitChat } from '@/network/socket';
+import { emitChat, emitDeleteChat } from '@/network/socket';
 
 let chatPanel: HTMLElement;
 let chatMessages: HTMLElement;
@@ -51,20 +51,54 @@ export function toggleChat(): void {
   }
 }
 
-/** 채팅 메시지 추가 */
-export function addChatMessage(data: { name: string; msg: string; time: number }): void {
+/** 채팅 메시지 엘리먼트 생성 */
+function createChatMsgEl(data: { name: string; msg: string; time: number }): HTMLElement {
   const el = document.createElement('div');
   el.className = 'chat-msg';
-  el.innerHTML = `<span class="chat-name">${data.name}</span><span class="chat-text">${escapeHtml(data.msg)}</span>`;
+  el.dataset.time = String(data.time);
+
+  const nameEl = document.createElement('span');
+  nameEl.className = 'chat-name';
+  nameEl.textContent = data.name;
+
+  const textEl = document.createElement('span');
+  textEl.className = 'chat-text';
+  textEl.textContent = data.msg;
+
+  el.appendChild(nameEl);
+  el.appendChild(textEl);
+
+  // 내 메시지에만 삭제 버튼 추가
+  if (data.name === getMyName()) {
+    const delBtn = document.createElement('button');
+    delBtn.className = 'chat-delete-btn';
+    delBtn.textContent = '×';
+    delBtn.title = '삭제';
+    delBtn.addEventListener('click', () => {
+      emitDeleteChat(data.name, data.time);
+    });
+    el.appendChild(delBtn);
+  }
+
+  return el;
+}
+
+/** 채팅 메시지 추가 */
+export function addChatMessage(data: { name: string; msg: string; time: number }): void {
+  const el = createChatMsgEl(data);
   chatMessages.appendChild(el);
-  // 자동 스크롤 (하단 근처에 있을 때만)
   const isNearBottom = chatMessages.scrollHeight - chatMessages.scrollTop - chatMessages.clientHeight < 60;
   if (isNearBottom) chatMessages.scrollTop = chatMessages.scrollHeight;
-  // 패널 닫혀있으면 뱃지 증가
   if (!chatPanel.classList.contains('open')) {
     chatUnread++;
     updateChatBadge();
   }
+}
+
+/** 채팅 메시지 제거 (서버 삭제 브로드캐스트 수신 시) */
+export function removeChatMessage(time: number): void {
+  const el = chatMessages.querySelector(`[data-time="${time}"]`);
+  if (el) el.remove();
 }
 
 /** 채팅 히스토리 수신 처리 (lastReadTime 기준 뱃지) */
@@ -73,9 +107,7 @@ export function handleChatHistory(msgs: { name: string; msg: string; time: numbe
   const lastRead = getLastReadTime();
   chatUnread = 0;
   for (const m of msgs) {
-    const el = document.createElement('div');
-    el.className = 'chat-msg';
-    el.innerHTML = `<span class="chat-name">${m.name}</span><span class="chat-text">${escapeHtml(m.msg)}</span>`;
+    const el = createChatMsgEl(m);
     chatMessages.appendChild(el);
     if (m.time > lastRead && !chatPanel.classList.contains('open')) {
       chatUnread++;

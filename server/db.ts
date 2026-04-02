@@ -206,4 +206,16 @@ async function saveChatToDB(name: string, msg: string, room: string): Promise<vo
   }
 }
 
-export { pool, initDB, loadFishFromDB, loadChatFromDB, saveChatToDB };
+// DB에서 채팅 메시지 삭제
+async function deleteChatFromDB(name: string, time: number): Promise<void> {
+  try {
+    await pool.query(
+      `DELETE FROM chat_messages WHERE name = $1 AND ABS(EXTRACT(EPOCH FROM created_at) * 1000 - $2) < 1500`,
+      [name, time]
+    );
+  } catch (e) {
+    console.error('채팅 삭제 실패:', (e as Error).message);
+  }
+}
+
+export { pool, initDB, loadFishFromDB, loadChatFromDB, saveChatToDB, deleteChatFromDB };

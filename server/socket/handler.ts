@@ -1,5 +1,5 @@
 import { Server, Socket } from 'socket.io';
-import { pool, Fish, saveChatToDB } from '../db';
+import { pool, Fish, saveChatToDB, deleteChatFromDB } from '../db';
 import {
   fishes,
   socketUidMap,
@@ -277,6 +277,20 @@ function registerSocketHandlers(io: Server): void {
       // DB에 저장 (비동기, 실패해도 무시)
       saveChatToDB(chatMsg.name, chatMsg.msg, room);
       io.to(room).emit('chatMessage', chatMsg);
+    });
+
+    // 채팅 삭제
+    socket.on('deleteChat', (data: { name: string; time: number }) => {
+      if (!data?.name || !data?.time) return;
+      const name = data.name.slice(0, 20);
+      // chatHistory에서 제거
+      const idx = chatHistory.findIndex(m => m.name === name && m.time === data.time);
+      if (idx !== -1) chatHistory.splice(idx, 1);
+      // DB에서 제거
+      deleteChatFromDB(name, data.time);
+      // 같은 방 전체에 삭제 알림
+      const room = getSocketRoom(socket.id);
+      io.to(room).emit('chatDeleted', { time: data.time });
     });
 
     // 초대장 전송 (로비 전체에 브로드캐스트)
