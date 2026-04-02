@@ -75,6 +75,11 @@ const fishes = new Map();
 let nextFishId = 1;
 const socketUidMap = new Map();
 
+// 채팅 히스토리 (최근 50개)
+const chatHistory = [];
+const MAX_CHAT_HISTORY = 50;
+const chatRateLimit = new Map(); // socketId → 마지막 전송 시간
+
 // DB에서 영구 물고기 로드
 async function loadFishFromDB() {
   const result = await pool.query('SELECT * FROM fish ORDER BY id');
@@ -194,6 +199,26 @@ io.on('connection', (socket) => {
     socket.broadcast.emit('fishPositions', updates);
   });
 
+  // 채팅 히스토리 전송
+  socket.emit('chatHistory', chatHistory);
+
+  // 채팅
+  socket.on('chat', (data) => {
+    if(!data || !data.msg || typeof data.msg !== 'string') return;
+    const msg = data.msg.trim().slice(0, 100);
+    if(!msg) return;
+    // 도배 방지 (1초에 1개)
+    const now = Date.now();
+    const last = chatRateLimit.get(socket.id) || 0;
+    if(now - last < 1000) return;
+    chatRateLimit.set(socket.id, now);
+
+    const chatMsg = { name: (data.name || '익명').slice(0, 20), msg, time: now };
+    chatHistory.push(chatMsg);
+    if(chatHistory.length > MAX_CHAT_HISTORY) chatHistory.shift();
+    io.emit('chatMessage', chatMsg);
+  });
+
   // 마우스 커서 공유
   socket.on('cursor', (data) => {
     socket.broadcast.emit('cursorMoved', {
@@ -211,6 +236,7 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     console.log(`퇴장: ${socket.id}`);
+    chatRateLimit.delete(socket.id);
     io.emit('onlineCount', io.engine.clientsCount);
     io.emit('cursorLeft', socket.id);
   });

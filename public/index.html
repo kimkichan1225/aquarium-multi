@@ -266,6 +266,72 @@
   }
   .my-fish-item .remove-btn:hover{background:rgba(255,80,80,0.3)}
 
+  /* 채팅 패널 */
+  #chat-panel{
+    position:fixed;left:0;top:48px;bottom:52px;width:280px;
+    background:rgba(5,15,35,0.88);backdrop-filter:blur(12px);
+    border-right:1px solid rgba(100,180,255,0.1);
+    z-index:200;transform:translateX(-100%);transition:transform 0.3s;
+    display:flex;flex-direction:column;
+  }
+  #chat-panel.open{transform:translateX(0)}
+  #chat-panel h3{
+    color:rgba(140,200,255,0.6);font-size:12px;letter-spacing:1px;
+    padding:12px 12px 8px;margin:0;display:flex;justify-content:space-between;align-items:center;
+    border-bottom:1px solid rgba(100,180,255,0.08);flex-shrink:0;
+  }
+  #chat-panel .panel-close{
+    background:none;border:none;color:rgba(140,200,255,0.5);font-size:16px;
+    cursor:pointer;padding:2px 6px;border-radius:4px;
+  }
+  #chat-panel .panel-close:hover{color:#fff;background:rgba(255,255,255,0.1);}
+  #chat-messages{
+    flex:1;overflow-y:auto;padding:8px 10px;
+    display:flex;flex-direction:column;gap:4px;
+  }
+  #chat-messages::-webkit-scrollbar{width:4px}
+  #chat-messages::-webkit-scrollbar-thumb{background:rgba(100,180,255,0.15);border-radius:2px}
+  .chat-msg{
+    padding:4px 0;font-size:11px;line-height:1.4;word-break:break-word;
+  }
+  .chat-msg .chat-name{
+    color:rgba(100,220,180,0.8);font-weight:600;margin-right:6px;
+  }
+  .chat-msg .chat-time{
+    color:rgba(140,200,255,0.3);font-size:9px;margin-left:4px;
+  }
+  .chat-msg .chat-text{
+    color:rgba(200,220,240,0.75);
+  }
+  .chat-msg.system{
+    color:rgba(140,200,255,0.35);font-size:10px;text-align:center;
+  }
+  #chat-input-area{
+    display:flex;gap:6px;padding:8px 10px;
+    border-top:1px solid rgba(100,180,255,0.08);flex-shrink:0;
+  }
+  #chat-input{
+    flex:1;background:rgba(20,40,70,0.5);border:1px solid rgba(100,180,255,0.12);
+    border-radius:8px;color:rgba(200,220,240,0.85);font-family:inherit;
+    font-size:11px;padding:7px 10px;outline:none;
+  }
+  #chat-input:focus{border-color:rgba(100,180,255,0.3)}
+  #chat-input::placeholder{color:rgba(140,200,255,0.25)}
+  #chat-send{
+    background:rgba(60,180,120,0.2);border:1px solid rgba(100,220,160,0.2);
+    border-radius:8px;color:rgba(130,230,170,0.8);font-size:11px;
+    padding:7px 12px;cursor:pointer;flex-shrink:0;
+  }
+  #chat-send:hover{background:rgba(60,180,120,0.35)}
+  .chat-badge{
+    position:absolute;top:-4px;right:-4px;
+    background:rgba(255,100,100,0.9);color:#fff;font-size:9px;
+    min-width:16px;height:16px;border-radius:8px;
+    display:flex;align-items:center;justify-content:center;
+    font-weight:600;padding:0 4px;
+  }
+  #btn-chat{position:relative}
+
   /* 토스트 알림 */
   #toast-container{
     position:fixed;top:60px;left:50%;transform:translateX(-50%);
@@ -334,6 +400,7 @@
 <div id="bottom-bar">
   <button class="btn primary" id="btn-create">+ 물고기 만들기</button>
   <button class="btn" id="btn-feed">먹이주기 (F)</button>
+  <button class="btn" id="btn-chat">채팅 (C)</button>
   <button class="btn" id="btn-my-fish">내 물고기</button>
   <button class="btn" id="btn-random">야생 물고기 (A)</button>
   <button class="btn" id="btn-jelly">해파리 (J)</button>
@@ -411,6 +478,15 @@
 <div id="my-fish-panel">
   <h3>내 물고기 <button class="panel-close" id="btn-close-fish-panel">&times;</button></h3>
   <div id="my-fish-list"></div>
+</div>
+
+<div id="chat-panel">
+  <h3>채팅 <button class="panel-close" id="btn-close-chat">&times;</button></h3>
+  <div id="chat-messages"></div>
+  <div id="chat-input-area">
+    <input type="text" id="chat-input" placeholder="메시지 입력..." maxlength="100" autocomplete="off">
+    <button id="chat-send">전송</button>
+  </div>
 </div>
 
 <!-- 토스트 -->
@@ -2021,7 +2097,7 @@ addEventListener('touchmove', e => { mx=e.touches[0].clientX; my=e.touches[0].cl
 
 addEventListener('click', e => {
   // UI 영역 클릭 무시
-  if(e.target.closest('#top-bar,#bottom-bar,#creator-overlay,#my-fish-panel')) return;
+  if(e.target.closest('#top-bar,#bottom-bar,#creator-overlay,#my-fish-panel,#chat-panel')) return;
   // 먹이 주기
   dropFood(e.clientX, e.clientY);
 });
@@ -2094,6 +2170,7 @@ addEventListener('keydown', e => {
   if(e.key === 'j' || e.key === 'J') spawnRandomJellyfish();
   if(e.key === 't' || e.key === 'T') cycleTheme();
   if(e.key === 'n' || e.key === 'N') { nightMode = !nightMode; _bgGradTheme = -1; drawBackground._sunGrad = null; }
+  if(e.key === 'c' || e.key === 'C') toggleChat();
 });
 
 // ══════════════════════
@@ -2776,6 +2853,66 @@ setInterval(() => {
   }
   if(updates.length > 0) socket.emit('fishPositions', updates);
 }, 200);
+
+// ══════════════════════
+// ── 채팅 ──
+// ══════════════════════
+const chatPanel = document.getElementById('chat-panel');
+const chatMessages = document.getElementById('chat-messages');
+const chatInput = document.getElementById('chat-input');
+let chatUnread = 0;
+
+function toggleChat() {
+  chatPanel.classList.toggle('open');
+  if(chatPanel.classList.contains('open')) {
+    chatUnread = 0;
+    updateChatBadge();
+    chatInput.focus();
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
+}
+
+function updateChatBadge() {
+  const btn = document.getElementById('btn-chat');
+  let badge = btn.querySelector('.chat-badge');
+  if(chatUnread > 0) {
+    if(!badge) { badge = document.createElement('span'); badge.className = 'chat-badge'; btn.appendChild(badge); }
+    badge.textContent = chatUnread > 99 ? '99+' : chatUnread;
+  } else if(badge) { badge.remove(); }
+}
+
+function addChatMessage(data) {
+  const el = document.createElement('div');
+  el.className = 'chat-msg';
+  const t = new Date(data.time);
+  const timeStr = t.getHours().toString().padStart(2,'0') + ':' + t.getMinutes().toString().padStart(2,'0');
+  el.innerHTML = `<span class="chat-name">${data.name}</span><span class="chat-text">${escapeHtml(data.msg)}</span><span class="chat-time">${timeStr}</span>`;
+  chatMessages.appendChild(el);
+  // 자동 스크롤 (하단 근처에 있을 때만)
+  const isNearBottom = chatMessages.scrollHeight - chatMessages.scrollTop - chatMessages.clientHeight < 60;
+  if(isNearBottom) chatMessages.scrollTop = chatMessages.scrollHeight;
+  // 패널 닫혀있으면 뱃지 증가
+  if(!chatPanel.classList.contains('open')) { chatUnread++; updateChatBadge(); }
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function sendChat() {
+  const msg = chatInput.value.trim();
+  if(!msg) return;
+  socket.emit('chat', { name: myName || '익명', msg });
+  chatInput.value = '';
+}
+
+document.getElementById('btn-chat').addEventListener('click', toggleChat);
+document.getElementById('btn-close-chat').addEventListener('click', () => chatPanel.classList.remove('open'));
+document.getElementById('chat-send').addEventListener('click', sendChat);
+chatInput.addEventListener('keydown', e => { if(e.key === 'Enter') sendChat(); });
+
+socket.on('chatMessage', (data) => { addChatMessage(data); });
+socket.on('chatHistory', (msgs) => { chatMessages.innerHTML = ''; for(const m of msgs) addChatMessage(m); });
 
 // 토스트 알림
 function showToast(msg) {
