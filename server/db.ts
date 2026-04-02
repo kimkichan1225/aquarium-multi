@@ -54,6 +54,15 @@ async function initDB(): Promise<void> {
     )
   `);
   await pool.query(`ALTER TABLE fish ADD COLUMN IF NOT EXISTS room_id INT REFERENCES rooms(id)`);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS chat_messages (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(20) NOT NULL,
+      msg VARCHAR(100) NOT NULL,
+      room VARCHAR(50) DEFAULT 'lobby',
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
   console.log('DB 테이블 준비 완료');
 }
 
@@ -152,4 +161,39 @@ async function loadFishFromDB(
   console.log(`DB에서 물고기 ${fishes.size}마리 로드`);
 }
 
-export { pool, initDB, loadFishFromDB };
+// DB에서 채팅 히스토리 로드
+async function loadChatFromDB(chatHistory: { name: string; msg: string; time: number }[], maxHistory: number): Promise<void> {
+  try {
+    const result = await pool.query(
+      `SELECT name, msg, EXTRACT(EPOCH FROM created_at) * 1000 as time FROM chat_messages
+       WHERE room = 'lobby' ORDER BY id DESC LIMIT $1`,
+      [maxHistory]
+    );
+    // 역순으로 넣어서 오래된 것이 앞에
+    chatHistory.length = 0;
+    for (let i = result.rows.length - 1; i >= 0; i--) {
+      chatHistory.push({
+        name: result.rows[i].name,
+        msg: result.rows[i].msg,
+        time: Math.floor(result.rows[i].time),
+      });
+    }
+    console.log(`DB에서 채팅 ${chatHistory.length}개 로드`);
+  } catch (e) {
+    console.error('채팅 로드 실패:', (e as Error).message);
+  }
+}
+
+// DB에 채팅 메시지 저장
+async function saveChatToDB(name: string, msg: string, room: string): Promise<void> {
+  try {
+    await pool.query(
+      'INSERT INTO chat_messages (name, msg, room) VALUES ($1, $2, $3)',
+      [name, msg, room]
+    );
+  } catch (e) {
+    console.error('채팅 저장 실패:', (e as Error).message);
+  }
+}
+
+export { pool, initDB, loadFishFromDB, loadChatFromDB, saveChatToDB };

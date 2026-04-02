@@ -1,5 +1,5 @@
 import { Server, Socket } from 'socket.io';
-import { pool, Fish } from '../db';
+import { pool, Fish, saveChatToDB } from '../db';
 import {
   fishes,
   socketUidMap,
@@ -274,6 +274,8 @@ function registerSocketHandlers(io: Server): void {
       chatHistory.push(chatMsg);
       if (chatHistory.length > MAX_CHAT_HISTORY) chatHistory.shift();
       const room = getSocketRoom(socket.id);
+      // DB에 저장 (비동기, 실패해도 무시)
+      saveChatToDB(chatMsg.name, chatMsg.msg, room);
       io.to(room).emit('chatMessage', chatMsg);
     });
 

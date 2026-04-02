@@ -2,8 +2,8 @@ import express, { Express } from 'express';
 import http from 'http';
 import path from 'path';
 import { Server } from 'socket.io';
-import { initDB, loadFishFromDB } from './db';
-import { fishes, getNextFishId, setNextFishId } from './socket/state';
+import { initDB, loadFishFromDB, loadChatFromDB } from './db';
+import { fishes, getNextFishId, setNextFishId, chatHistory, MAX_CHAT_HISTORY } from './socket/state';
 import { registerSocketHandlers } from './socket/handler';
 import authRouter from './routes/auth';
 import roomRouter from './routes/room';
@@ -38,6 +38,7 @@ async function start(): Promise<void> {
   if (process.env.DATABASE_URL) {
     await initDB();
     await loadFishFromDB(fishes, getNextFishId, setNextFishId);
+    await loadChatFromDB(chatHistory, MAX_CHAT_HISTORY);
   } else {
     console.log('DATABASE_URL 없음 - DB 없이 메모리 모드로 실행');
   }
