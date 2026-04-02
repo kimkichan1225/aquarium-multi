@@ -337,7 +337,6 @@
   <button class="btn" id="btn-my-fish">내 물고기</button>
   <button class="btn" id="btn-random">야생 물고기 (A)</button>
   <button class="btn" id="btn-jelly">해파리 (J)</button>
-  <button class="btn" id="btn-bubble">기포 (B)</button>
   <button class="btn" id="btn-theme">테마: 산호초 (T)</button>
   <button class="btn" id="btn-night">야간모드 (N)</button>
 </div>
@@ -444,7 +443,6 @@ const TAU = Math.PI * 2;
 // ── 상태 ──
 let mx = W/2, my = H/2;
 let nightMode = false;
-let bubbleMode = false;
 let time = 0;
 let frameCount = 0;
 let currentTheme = 1;
@@ -1823,9 +1821,6 @@ addEventListener('resize', () => { resize(); initEnvironment(); });
 // 기포 자동 생성
 setInterval(() => {
   if(bubbles.length<60) bubbles.push(new Bubble());
-  if(bubbleMode && bubbles.length<120){
-    for(let i=0;i<3;i++) bubbles.push(new Bubble());
-  }
 }, 300);
 
 // ══════════════════════
@@ -1918,7 +1913,6 @@ addEventListener('keydown', e => {
   if(e.key === 'a' || e.key === 'A') spawnRandomFish();
   if(e.key === 'j' || e.key === 'J') spawnRandomJellyfish();
   if(e.key === 't' || e.key === 'T') cycleTheme();
-  if(e.key === 'b' || e.key === 'B') bubbleMode = !bubbleMode;
   if(e.key === 'n' || e.key === 'N') nightMode = !nightMode;
 });
 
@@ -2493,10 +2487,6 @@ document.getElementById('btn-submit').addEventListener('click', () => {
 document.getElementById('btn-feed').addEventListener('click', () => dropFood(W/2+rand(-100,100), 80));
 document.getElementById('btn-random').addEventListener('click', () => spawnRandomFish());
 document.getElementById('btn-jelly').addEventListener('click', () => spawnRandomJellyfish());
-document.getElementById('btn-bubble').addEventListener('click', () => {
-  bubbleMode = !bubbleMode;
-  document.getElementById('btn-bubble').classList.toggle('active', bubbleMode);
-});
 function cycleTheme() {
   currentTheme = (currentTheme + 1) % THEMES.length;
   document.getElementById('btn-theme').textContent = `테마: ${THEMES[currentTheme].name} (T)`;
