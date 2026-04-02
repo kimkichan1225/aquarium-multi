@@ -46,9 +46,7 @@ export function toggleChat(): void {
 export function addChatMessage(data: { name: string; msg: string; time: number }): void {
   const el = document.createElement('div');
   el.className = 'chat-msg';
-  const t = new Date(data.time);
-  const timeStr = t.getHours().toString().padStart(2, '0') + ':' + t.getMinutes().toString().padStart(2, '0');
-  el.innerHTML = `<span class="chat-name">${data.name}</span><span class="chat-text">${escapeHtml(data.msg)}</span><span class="chat-time">${timeStr}</span>`;
+  el.innerHTML = `<span class="chat-name">${data.name}</span><span class="chat-text">${escapeHtml(data.msg)}</span>`;
   chatMessages.appendChild(el);
   // 자동 스크롤 (하단 근처에 있을 때만)
   const isNearBottom = chatMessages.scrollHeight - chatMessages.scrollTop - chatMessages.clientHeight < 60;
@@ -60,10 +58,18 @@ export function addChatMessage(data: { name: string; msg: string; time: number }
   }
 }
 
-/** 채팅 히스토리 수신 처리 */
+/** 채팅 히스토리 수신 처리 (뱃지 없이) */
 export function handleChatHistory(msgs: { name: string; msg: string; time: number }[]): void {
   chatMessages.innerHTML = '';
-  for (const m of msgs) addChatMessage(m);
+  chatUnread = 0;
+  for (const m of msgs) {
+    const el = document.createElement('div');
+    el.className = 'chat-msg';
+    el.innerHTML = `<span class="chat-name">${m.name}</span><span class="chat-text">${escapeHtml(m.msg)}</span>`;
+    chatMessages.appendChild(el);
+  }
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+  updateChatBadge();
 }
 
 /** 채팅 전송 */
