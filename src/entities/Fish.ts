@@ -182,8 +182,8 @@ export class Fish {
           this.turnCooldown = rand(2, 6);
         }
         if (foods.length > 0 && (frameCount + this.id) % FOOD_SEARCH_INTERVAL === 0) {
-          let closest: Food | null = null, closestDist = 300;
-          for (let fi = 0; fi < foods.length; fi++) { const f = foods[fi]; if (f.eaten) continue; const dx = f.x - this.x, dy = f.y - this.y, d = Math.sqrt(dx * dx + dy * dy); if (d < closestDist) { closest = f; closestDist = d; } }
+          let closest: Food | null = null, closestDist2 = 90000; // 300^2
+          for (let fi = 0; fi < foods.length; fi++) { const f = foods[fi]; if (f.eaten) continue; const dx = f.x - this.x, dy = f.y - this.y, d2 = dx * dx + dy * dy; if (d2 < closestDist2) { closest = f; closestDist2 = d2; } }
           if (closest) this.chasingFood = closest;
         }
       }

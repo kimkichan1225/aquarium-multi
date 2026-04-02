@@ -53,6 +53,23 @@ function getBgGradient(colors: string[]): CanvasGradient {
 export function invalidateBgCache(): void {
   _bgGradTheme = '-1';
   _drawBackground_sunGrad = null;
+  _sandGradKey = '';
+}
+
+// 모래 그라데이션 캐시
+let _sandGradCache: CanvasGradient | null = null;
+let _sandGradKey = '';
+function getSandGradient(H: number, nightMode: boolean, th: any): CanvasGradient {
+  const key = getCurrentTheme() + '|' + nightMode + '|' + H;
+  if (_sandGradCache && _sandGradKey === key) return _sandGradCache;
+  const sandColors = nightMode ? th.sandNight : th.sand;
+  const g = ctx.createLinearGradient(0, H - 80, 0, H);
+  g.addColorStop(0, 'rgba(20,40,50,0)');
+  g.addColorStop(0.3, sandColors[0]);
+  g.addColorStop(1, sandColors[1]);
+  _sandGradCache = g;
+  _sandGradKey = key;
+  return g;
 }
 
 // 석양 캐시
@@ -122,13 +139,8 @@ function drawBackground(): void {
     ctx.restore();
   }
 
-  // 바닥 모래
-  const sandColors = nightMode ? th.sandNight : th.sand;
-  const sandG = ctx.createLinearGradient(0, H - 80, 0, H);
-  sandG.addColorStop(0, 'rgba(20,40,50,0)');
-  sandG.addColorStop(0.3, sandColors[0]);
-  sandG.addColorStop(1, sandColors[1]);
-  ctx.fillStyle = sandG;
+  // 바닥 모래 (그라데이션 캐시)
+  ctx.fillStyle = getSandGradient(H, nightMode, th);
   ctx.fillRect(0, H - 80, W, 80);
 
   // 모래 질감 (사전 생성된 점 배열 사용)
@@ -194,26 +206,22 @@ function animate(now: number): void {
     else bubbles[i].draw(ctx);
   }
 
-  // 다른 유저 커서 그리기
-  const cursorNow = Date.now();
+  // 다른 유저 커서 그리기 (RadialGradient 제거 → 단순 원)
   for (const [id, c] of remoteCursors) {
-    // 5초 이상 업데이트 없으면 제거
-    if (cursorNow - c.lastSeen > 5000) { remoteCursors.delete(id); continue; }
     // 부드럽게 보간
     c.x = lerp(c.x, c.targetX, 0.15);
     c.y = lerp(c.y, c.targetY, 0.15);
 
     ctx.save();
     ctx.globalAlpha = 0.7;
-    // 물방울 커서
     const pulse = 1 + Math.sin(time * 3 + id.charCodeAt(0)) * 0.15;
     const r = 8 * pulse;
-    const grd = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, r);
-    grd.addColorStop(0, 'rgba(100,220,255,0.5)');
-    grd.addColorStop(0.6, 'rgba(80,180,255,0.25)');
-    grd.addColorStop(1, 'rgba(60,140,255,0)');
-    ctx.fillStyle = grd;
-    ctx.beginPath(); ctx.arc(c.x, c.y, r, 0, TAU); ctx.fill();
+    // 글로우 (단순 알파 원)
+    ctx.fillStyle = 'rgba(80,180,255,0.15)';
+    ctx.beginPath(); ctx.arc(c.x, c.y, r * 1.5, 0, TAU); ctx.fill();
+    // 커서 점
+    ctx.fillStyle = 'rgba(100,220,255,0.5)';
+    ctx.beginPath(); ctx.arc(c.x, c.y, r * 0.6, 0, TAU); ctx.fill();
     // 중심 점
     ctx.fillStyle = 'rgba(150,230,255,0.8)';
     ctx.beginPath(); ctx.arc(c.x, c.y, 2.5, 0, TAU); ctx.fill();
@@ -272,6 +280,14 @@ export function initRenderer(): void {
   setInterval(() => {
     if (bubbles.length < 60) bubbles.push(new Bubble());
   }, 300);
+
+  // 오래된 커서 정리 (매 프레임 대신 1초마다)
+  setInterval(() => {
+    const now = Date.now();
+    for (const [id, c] of remoteCursors) {
+      if (now - c.lastSeen > 5000) remoteCursors.delete(id);
+    }
+  }, 1000);
 
   // 애니메이션 시작
   lastTime = performance.now();

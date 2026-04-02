@@ -36,23 +36,18 @@ export class Bubble {
   draw(ctx: CanvasRenderingContext2D): void {
     ctx.save();
     ctx.globalAlpha = this.opacity;
-    const g = ctx.createRadialGradient(
-      this.x - this.size * 0.3, this.y - this.size * 0.3, 0,
-      this.x, this.y, this.size
-    );
-    g.addColorStop(0, 'rgba(180,230,255,0.15)');
-    g.addColorStop(0.7, 'rgba(120,200,255,0.08)');
-    g.addColorStop(1, 'rgba(100,180,255,0.2)');
-    ctx.fillStyle = g;
+    // 단순 원 + 스트로크 (RadialGradient 제거, 60개×60fps 절약)
+    ctx.fillStyle = 'rgba(140,210,255,0.12)';
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.size, 0, TAU);
     ctx.fill();
-    ctx.strokeStyle = 'rgba(160,220,255,0.3)';
+    ctx.strokeStyle = 'rgba(160,220,255,0.25)';
     ctx.lineWidth = 0.5;
     ctx.stroke();
-    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    // 하이라이트
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
     ctx.beginPath();
-    ctx.ellipse(this.x - this.size * 0.25, this.y - this.size * 0.25, this.size * 0.2, this.size * 0.15, -0.5, 0, TAU);
+    ctx.arc(this.x - this.size * 0.2, this.y - this.size * 0.2, this.size * 0.25, 0, TAU);
     ctx.fill();
     ctx.restore();
   }
