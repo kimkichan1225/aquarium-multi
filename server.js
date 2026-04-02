@@ -216,6 +216,17 @@ io.on('connection', (socket) => {
   });
 });
 
+// ── 관리자: 전체 새로고침 ──
+app.post('/admin/reload', (req, res) => {
+  const secret = req.headers['x-admin-secret'];
+  if(secret !== (process.env.ADMIN_SECRET || 'aquarium-admin')) {
+    return res.status(403).json({ ok: false, msg: '권한 없음' });
+  }
+  io.emit('forceReload');
+  console.log('전체 클라이언트 새로고침 브로드캐스트');
+  res.json({ ok: true, msg: `${io.engine.clientsCount}명에게 새로고침 전송` });
+});
+
 // ── 서버 시작 ──
 const PORT = process.env.PORT || 3000;
 

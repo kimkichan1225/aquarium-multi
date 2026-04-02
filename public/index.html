@@ -2400,6 +2400,8 @@ socket.on('connect', () => {
   socket.emit('register', myUid);
 });
 
+socket.on('forceReload', () => { location.reload(); });
+
 socket.on('onlineCount', (count) => {
   document.getElementById('online-count').textContent = count;
 });
