@@ -87,6 +87,7 @@ export function initMyFishPanel(): void {
 
   document.getElementById('btn-my-fish')!.addEventListener('click', () => {
     myFishPanel.classList.toggle('open');
+    if (myFishPanel.classList.contains('open')) updateMyFishList();
   });
 
   document.getElementById('btn-close-fish-panel')!.addEventListener('click', () => {

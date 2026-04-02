@@ -7,7 +7,7 @@ import {
   setCurrentTheme, setNightMode,
 } from '@/state/store';
 import { emitJoinRoom } from '@/network/socket';
-import { getRoom } from '@/network/api';
+import { getRoom, createRoom } from '@/network/api';
 import { seaweeds, corals, initEnvironment } from './Environment';
 import { getCtx } from './Renderer';
 import { invalidateBgCache } from './Renderer';
@@ -56,6 +56,16 @@ async function enterRoom(nickname: string): Promise<void> {
 
   // 에디터 닫기
   closeEditor();
+
+  // 방 주인이면 방이 없을 때 자동 생성
+  if (owner) {
+    try {
+      const roomCheck = await getRoom(nickname);
+      if (!roomCheck || roomCheck.ok === false) {
+        await createRoom(nickname);
+      }
+    } catch { /* 무시 */ }
+  }
 
   // 소켓으로 방 참가
   emitJoinRoom(nickname);
