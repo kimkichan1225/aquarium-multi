@@ -333,14 +333,15 @@
   /* 채팅 고정 버튼 (항상 보임) */
   #chat-floating-btn{
     position:fixed;left:16px;bottom:56px;z-index:210;
-    background:rgba(60,140,200,0.2);backdrop-filter:blur(8px);
-    border:1px solid rgba(100,180,255,0.15);border-radius:50%;
-    width:44px;height:44px;cursor:pointer;
+    background:rgba(40,100,180,0.4);backdrop-filter:blur(8px);
+    border:1px solid rgba(100,180,255,0.25);border-radius:50%;
+    width:48px;height:48px;cursor:pointer;
     display:flex;align-items:center;justify-content:center;
-    transition:all 0.3s;opacity:0.7;
+    transition:all 0.3s;
+    box-shadow:0 2px 12px rgba(0,80,180,0.3);
   }
-  #chat-floating-btn:hover{opacity:1;background:rgba(60,140,200,0.35);transform:scale(1.08)}
-  #chat-floating-btn svg{width:20px;height:20px;fill:rgba(150,210,255,0.8)}
+  #chat-floating-btn:hover{background:rgba(40,100,180,0.55);transform:scale(1.1);box-shadow:0 4px 20px rgba(0,80,180,0.4)}
+  #chat-floating-btn svg{width:22px;height:22px;fill:rgba(180,230,255,0.9)}
   #chat-floating-btn .chat-badge{top:-2px;right:-2px}
 
   /* 토스트 알림 */
@@ -2877,9 +2878,12 @@ const chatMessages = document.getElementById('chat-messages');
 const chatInput = document.getElementById('chat-input');
 let chatUnread = 0;
 
+const chatFloatingBtn = document.getElementById('chat-floating-btn');
 function toggleChat() {
   chatPanel.classList.toggle('open');
-  if(chatPanel.classList.contains('open')) {
+  const isOpen = chatPanel.classList.contains('open');
+  chatFloatingBtn.style.display = isOpen ? 'none' : 'flex';
+  if(isOpen) {
     chatUnread = 0;
     updateChatBadge();
     chatInput.focus();
@@ -2922,7 +2926,7 @@ function sendChat() {
 }
 
 document.getElementById('chat-floating-btn').addEventListener('click', toggleChat);
-document.getElementById('btn-close-chat').addEventListener('click', () => chatPanel.classList.remove('open'));
+document.getElementById('btn-close-chat').addEventListener('click', () => { chatPanel.classList.remove('open'); chatFloatingBtn.style.display = 'flex'; });
 document.getElementById('chat-send').addEventListener('click', sendChat);
 chatInput.addEventListener('keydown', e => { if(e.key === 'Enter') sendChat(); });
 
