@@ -330,7 +330,18 @@
     display:flex;align-items:center;justify-content:center;
     font-weight:600;padding:0 4px;
   }
-  #btn-chat{position:relative}
+  /* 채팅 고정 버튼 (항상 보임) */
+  #chat-floating-btn{
+    position:fixed;left:16px;bottom:56px;z-index:210;
+    background:rgba(60,140,200,0.2);backdrop-filter:blur(8px);
+    border:1px solid rgba(100,180,255,0.15);border-radius:50%;
+    width:44px;height:44px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    transition:all 0.3s;opacity:0.7;
+  }
+  #chat-floating-btn:hover{opacity:1;background:rgba(60,140,200,0.35);transform:scale(1.08)}
+  #chat-floating-btn svg{width:20px;height:20px;fill:rgba(150,210,255,0.8)}
+  #chat-floating-btn .chat-badge{top:-2px;right:-2px}
 
   /* 토스트 알림 */
   #toast-container{
@@ -396,11 +407,15 @@
 <!-- 캔버스 -->
 <canvas id="c"></canvas>
 
+<!-- 채팅 플로팅 버튼 -->
+<div id="chat-floating-btn">
+  <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.2L4 17.2V4h16v12z"/></svg>
+</div>
+
 <!-- 하단 바 -->
 <div id="bottom-bar">
   <button class="btn primary" id="btn-create">+ 물고기 만들기</button>
   <button class="btn" id="btn-feed">먹이주기 (F)</button>
-  <button class="btn" id="btn-chat">채팅 (C)</button>
   <button class="btn" id="btn-my-fish">내 물고기</button>
   <button class="btn" id="btn-random">야생 물고기 (A)</button>
   <button class="btn" id="btn-jelly">해파리 (J)</button>
@@ -2097,7 +2112,7 @@ addEventListener('touchmove', e => { mx=e.touches[0].clientX; my=e.touches[0].cl
 
 addEventListener('click', e => {
   // UI 영역 클릭 무시
-  if(e.target.closest('#top-bar,#bottom-bar,#creator-overlay,#my-fish-panel,#chat-panel')) return;
+  if(e.target.closest('#top-bar,#bottom-bar,#creator-overlay,#my-fish-panel,#chat-panel,#chat-floating-btn')) return;
   // 먹이 주기
   dropFood(e.clientX, e.clientY);
 });
@@ -2873,7 +2888,7 @@ function toggleChat() {
 }
 
 function updateChatBadge() {
-  const btn = document.getElementById('btn-chat');
+  const btn = document.getElementById('chat-floating-btn');
   let badge = btn.querySelector('.chat-badge');
   if(chatUnread > 0) {
     if(!badge) { badge = document.createElement('span'); badge.className = 'chat-badge'; btn.appendChild(badge); }
@@ -2906,7 +2921,7 @@ function sendChat() {
   chatInput.value = '';
 }
 
-document.getElementById('btn-chat').addEventListener('click', toggleChat);
+document.getElementById('chat-floating-btn').addEventListener('click', toggleChat);
 document.getElementById('btn-close-chat').addEventListener('click', () => chatPanel.classList.remove('open'));
 document.getElementById('chat-send').addEventListener('click', sendChat);
 chatInput.addEventListener('keydown', e => { if(e.key === 'Enter') sendChat(); });
