@@ -60,6 +60,10 @@ async function enterRoom(nickname: string): Promise<void> {
   // 소켓으로 방 참가
   emitJoinRoom(nickname);
 
+  // 개인 방은 기본 수초/산호 없이 시작 (장식물 데이터로 대체)
+  seaweeds.length = 0;
+  corals.length = 0;
+
   // 상단바 방 정보 표시
   const roomInfo = document.getElementById('room-info');
   const roomName = document.getElementById('room-name');
@@ -70,6 +74,7 @@ async function enterRoom(nickname: string): Promise<void> {
   if (roomName) roomName.textContent = `${nickname}의 방`;
   if (btnEditRoom) btnEditRoom.style.display = owner ? 'inline-block' : 'none';
   if (titleEl) titleEl.textContent = `${nickname}의 아쿠아리움`;
+  document.getElementById('top-bar')?.classList.add('in-room');
 
   // 하단바 "로비로" 버튼 표시
   const btnToLobby = document.getElementById('btn-to-lobby');
@@ -117,6 +122,7 @@ function enterLobby(): void {
 
   if (roomInfo) roomInfo.style.display = 'none';
   if (titleEl) titleEl.textContent = 'MULTI AQUARIUM';
+  document.getElementById('top-bar')?.classList.remove('in-room');
 
   // 하단바 "로비로" 버튼 숨김
   const btnToLobby = document.getElementById('btn-to-lobby');

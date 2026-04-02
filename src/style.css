@@ -12,6 +12,7 @@ body{overflow:hidden;background:#020810;font-family:'Segoe UI',system-ui,sans-se
   opacity:0.5;transition:opacity 0.4s;
 }
 #top-bar:hover{opacity:1}
+#top-bar.in-room{opacity:1;background:rgba(2,8,16,0.6);backdrop-filter:blur(8px)}
 #top-bar>*{pointer-events:auto}
 #top-bar h1{
   color:rgba(140,200,255,0.8);font-size:15px;font-weight:500;
