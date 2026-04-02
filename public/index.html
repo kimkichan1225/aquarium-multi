@@ -1951,6 +1951,8 @@ class Coral {
 // ── 초기화 ──
 // ══════════════════════
 const fishes = [];
+let fishSortDirty = true;
+let lastFishCount = 0;
 const bubbles = [];
 const foods = [];
 const seaweeds = [];
@@ -1984,7 +1986,8 @@ function sendCursor(x, y) {
   }
 }
 
-addEventListener('mousemove', e => { mx=e.clientX; my=e.clientY; checkFishHover(); sendCursor(mx,my); });
+let lastHoverCheck = 0;
+addEventListener('mousemove', e => { mx=e.clientX; my=e.clientY; const now=Date.now(); if(now-lastHoverCheck>150){checkFishHover();lastHoverCheck=now;} sendCursor(mx,my); });
 addEventListener('touchmove', e => { mx=e.touches[0].clientX; my=e.touches[0].clientY; sendCursor(mx,my); });
 
 addEventListener('click', e => {
@@ -2145,7 +2148,7 @@ function drawBackground() {
 
   // 모래 질감
   ctx.fillStyle = nightMode ? th.sandTexNight : th.sandTex;
-  for(let i=0;i<W;i+=rand(3,8)){
+  for(let i=0;i<W;i+=rand(5,12)){
     const sy = H-rand(5,65);
     ctx.beginPath(); ctx.arc(i,sy,rand(0.5,1.5),0,TAU); ctx.fill();
   }
@@ -2175,10 +2178,10 @@ function animate(now) {
   for(const f of fishes){ f.update(dt); }
   // 죽은 임시 물고기 제거
   for(let i = fishes.length - 1; i >= 0; i--) {
-    if(fishes[i].dead && fishes[i].deathBubbles.length === 0) { fishById.delete(fishes[i].id); fishes.splice(i, 1); }
+    if(fishes[i].dead && fishes[i].deathBubbles.length === 0) { fishById.delete(fishes[i].id); fishes.splice(i, 1); fishSortDirty = true; }
   }
-  // z 기반 정렬
-  fishes.sort((a,b) => a.z - b.z);
+  // z 기반 정렬 (물고기 추가/제거 시에만)
+  if(fishSortDirty) { fishes.sort((a,b) => a.z - b.z); fishSortDirty = false; }
   for(const f of fishes){ f.draw(); }
 
   // 기포
@@ -2228,15 +2231,15 @@ function animate(now) {
     ctx.strokeStyle = 'rgba(120,200,255,0.5)';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    for(let x=0;x<W;x+=10){
+    for(let x=0;x<W;x+=20){
       ctx.lineTo(x, y + Math.sin(x*0.02+time*1.5+i)*3);
     }
     ctx.stroke();
   }
   ctx.restore();
 
-  // UI 업데이트
-  document.getElementById('fish-total').textContent = fishes.length;
+  // UI 업데이트 (변경 시에만)
+  if(lastFishCount !== fishes.length) { document.getElementById('fish-total').textContent = fishes.length; lastFishCount = fishes.length; }
 }
 
 requestAnimationFrame(animate);
@@ -2396,6 +2399,7 @@ socket.on('init', (fishList) => {
     fishes.push(fish);
     fishById.set(fish.id, fish);
   }
+  fishSortDirty = true;
   updateMyFishList();
 });
 
@@ -2407,6 +2411,7 @@ socket.on('fishAdded', (data) => {
   fish.showName = true;
   fishes.push(fish);
   fishById.set(fish.id, fish);
+  fishSortDirty = true;
   updateMyFishList();
 });
 
@@ -2449,7 +2454,7 @@ socket.on('fishRemoved', (fishId) => {
     }
   } else {
     const idx = fishes.indexOf(fish);
-    if(idx >= 0) { fishById.delete(fish.id); fishes.splice(idx, 1); }
+    if(idx >= 0) { fishById.delete(fish.id); fishes.splice(idx, 1); fishSortDirty = true; }
   }
   updateMyFishList();
 });
@@ -2561,7 +2566,7 @@ function updatePreview() {
 }
 
 // 프리뷰 애니메이션
-setInterval(updatePreview, 50);
+setInterval(updatePreview, 100);
 
 // 색상 변경 시 프리뷰 업데이트
 document.querySelectorAll('.color-pick input').forEach(el => {
