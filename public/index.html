@@ -1628,15 +1628,20 @@ class Fish {
       if(this.dyingProgress >= 1) this.dead = true;
     }
 
-    // 다른 유저 소유 물고기는 수신 위치로 lerp (AI 비활성)
-    // 단, 3초 이상 업데이트 없으면 자체 AI로 전환
+    // 다른 유저 소유 물고기: dead reckoning + lerp (AI 비활성)
+    // 3초 이상 업데이트 없으면 자체 AI로 전환
     if(this.ownerId !== myUid && this.remoteX != null) {
-      if(this.lastRemoteUpdate && (Date.now() - this.lastRemoteUpdate > 3000)) {
-        this.remoteX = null;
-        this.remoteY = null;
+      const msSince = this.lastRemoteUpdate ? Date.now() - this.lastRemoteUpdate : 9999;
+      if(msSince > 3000) {
+        this.remoteX = null; this.remoteY = null;
+        this.remoteVx = 0; this.remoteVy = 0;
       } else {
-        this.x = lerp(this.x, this.remoteX, 0.12 * s);
-        this.y = lerp(this.y, this.remoteY, 0.12 * s);
+        // 마지막 수신 속도로 위치 예측 후 lerp
+        const predT = Math.min(msSince / 1000, 0.5);
+        const predX = this.remoteX + (this.remoteVx || 0) * predT;
+        const predY = this.remoteY + (this.remoteVy || 0) * predT;
+        this.x = lerp(this.x, predX, 0.2 * s);
+        this.y = lerp(this.y, predY, 0.2 * s);
         return;
       }
     }
@@ -1889,6 +1894,10 @@ class Seaweed {
     this.color1=pick(['#1B5E20','#2E7D32','#388E3C','#0D4A0D','#145A32']);
     this.color2=pick(['#4CAF50','#66BB6A','#81C784','#A5D6A7']);
     this.z=rand(0.7,1.3);
+    // 그라데이션 캐시 (좌표가 고정이므로 한 번만 생성)
+    const g=ctx.createLinearGradient(this.x,this.baseY,this.x,this.baseY-this.segments*this.segLen);
+    g.addColorStop(0,this.color1);g.addColorStop(1,this.color2);
+    this._grad=g;
   }
   draw(){
     ctx.save();ctx.globalAlpha=0.7*clamp(this.z,0.5,1);
@@ -1902,8 +1911,7 @@ class Seaweed {
     for(let i=1;i<pts.length;i++){const t=i/(pts.length-1);const w=this.width*(1-t*0.6);ctx.lineTo(pts[i].x-w/2,pts[i].y);}
     for(let i=pts.length-1;i>=0;i--){const t=i/(pts.length-1);const w=this.width*(1-t*0.6);ctx.lineTo(pts[i].x+w/2,pts[i].y);}
     ctx.closePath();
-    const g=ctx.createLinearGradient(this.x,this.baseY,this.x,this.baseY-this.segments*this.segLen);
-    g.addColorStop(0,this.color1);g.addColorStop(1,this.color2);ctx.fillStyle=g;ctx.fill();
+    ctx.fillStyle=this._grad;ctx.fill();
     ctx.restore();
   }
 }
@@ -1958,12 +1966,39 @@ const foods = [];
 const seaweeds = [];
 const corals = [];
 
+// 모래 텍스처 점 (매 프레임 rand() 호출 방지 - 한번만 생성)
+let sandDots = [];
+function generateSandDots() {
+  sandDots = [];
+  for(let i=0;i<W;i+=rand(5,12)){
+    sandDots.push({ x:i, y:H-rand(5,65), r:rand(0.5,1.5) });
+  }
+}
+
+// 배경 그라데이션 캐시 (테마/야간 변경 시에만 재생성)
+let _bgGradCache = null, _bgGradTheme = -1, _bgGradNight = null;
+function getBgGradient(th, colors) {
+  const key = currentTheme + '|' + nightMode;
+  if(_bgGradTheme === key) return _bgGradCache;
+  const bg = ctx.createLinearGradient(0,0,0,H);
+  bg.addColorStop(0, colors[0]);
+  bg.addColorStop(0.33, colors[1]);
+  bg.addColorStop(0.66, colors[2]);
+  bg.addColorStop(1, colors[3]);
+  _bgGradCache = bg;
+  _bgGradTheme = key;
+  return bg;
+}
+
 // 환경 생성
 function initEnvironment() {
   seaweeds.length = 0;
   corals.length = 0;
   for(let i=0;i<Math.floor(W/80);i++) seaweeds.push(new Seaweed(rand(30,W-30)));
   for(let i=0;i<Math.floor(W/150);i++) corals.push(new Coral(rand(60,W-60)));
+  generateSandDots();
+  _bgGradTheme = -1; // 그라데이션 캐시 초기화
+  drawBackground._sunGrad = null; // 석양 캐시 초기화
 }
 initEnvironment();
 addEventListener('resize', () => { resize(); initEnvironment(); });
@@ -2064,7 +2099,7 @@ addEventListener('keydown', e => {
   if(e.key === 'a' || e.key === 'A') spawnRandomFish();
   if(e.key === 'j' || e.key === 'J') spawnRandomJellyfish();
   if(e.key === 't' || e.key === 'T') cycleTheme();
-  if(e.key === 'n' || e.key === 'N') nightMode = !nightMode;
+  if(e.key === 'n' || e.key === 'N') { nightMode = !nightMode; _bgGradTheme = -1; drawBackground._sunGrad = null; }
 });
 
 // ══════════════════════
@@ -2077,25 +2112,20 @@ function drawBackground() {
   const nightMul = nightMode ? 0.4 : 1;
   const colors = nightMode ? th.night : th.sky;
 
-  // 바다 그라데이션
-  const bg = ctx.createLinearGradient(0,0,0,H);
-  bg.addColorStop(0, colors[0]);
-  bg.addColorStop(0.33, colors[1]);
-  bg.addColorStop(0.66, colors[2]);
-  bg.addColorStop(1, colors[3]);
-  ctx.fillStyle=bg;
+  // 바다 그라데이션 (캐시 활용)
+  ctx.fillStyle = getBgGradient(th, colors);
   ctx.fillRect(0,0,W,H);
 
-  // 빛줄기
+  // 빛줄기 (단순 알파값 fill - LinearGradient 매 프레임 생성 방지)
   ctx.save();
   const lightCount = nightMode ? 2 : 5;
+  const lightAlpha = 0.04 * nightMul;
+  // light 색상에서 rgba 조합
+  const lightFill = th.light + lightAlpha + ')';
+  ctx.fillStyle = lightFill;
   for(let i=0;i<lightCount;i++){
     const lx = W*0.1 + i*(W*0.2) + Math.sin(time*0.3+i)*30;
     const lw = 40+Math.sin(time*0.5+i*1.5)*15;
-    const lg = ctx.createLinearGradient(lx,0,lx,H*0.7);
-    lg.addColorStop(0, th.light + (0.04*nightMul) + ')');
-    lg.addColorStop(1, th.light + '0)');
-    ctx.fillStyle=lg;
     ctx.beginPath();
     ctx.moveTo(lx-lw,0);ctx.lineTo(lx+lw,0);
     ctx.lineTo(lx+lw*1.5,H*0.7);ctx.lineTo(lx-lw*1.5,H*0.7);
@@ -2103,36 +2133,37 @@ function drawBackground() {
   }
   ctx.restore();
 
-  // 심해 테마: 생물발광 파티클
+  // 심해 테마: 생물발광 파티클 (글로우 간소화 - RadialGradient 제거)
   if(currentTheme === 2) {
     ctx.save();
+    const colors2 = ['80,140,255','100,255,200','200,100,255','255,180,80'];
     for(let i = 0; i < 15; i++) {
       const px = (Math.sin(time*0.2 + i*2.3) * 0.5 + 0.5) * W;
       const py = (Math.cos(time*0.15 + i*1.7) * 0.5 + 0.5) * H * 0.8;
       const pr = 1.5 + Math.sin(time*2 + i) * 0.8;
       const alpha = 0.15 + Math.sin(time*1.5 + i*0.9) * 0.1;
-      const colors2 = ['80,140,255','100,255,200','200,100,255','255,180,80'];
       const c = colors2[i % 4];
+      // 글로우 (단순 큰 원으로 대체 - 매 프레임 RadialGradient 생성 비용 제거)
+      ctx.fillStyle = `rgba(${c},${alpha*0.12*nightMul})`;
+      ctx.beginPath(); ctx.arc(px, py, pr*7, 0, TAU); ctx.fill();
       ctx.fillStyle = `rgba(${c},${alpha * nightMul})`;
       ctx.beginPath(); ctx.arc(px, py, pr, 0, TAU); ctx.fill();
-      // 글로우
-      const gg = ctx.createRadialGradient(px,py,0,px,py,pr*6);
-      gg.addColorStop(0, `rgba(${c},${alpha*0.3*nightMul})`);
-      gg.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = gg;
-      ctx.beginPath(); ctx.arc(px, py, pr*6, 0, TAU); ctx.fill();
     }
     ctx.restore();
   }
 
-  // 석양 테마: 상단에 따뜻한 빛
+  // 석양 테마: 상단에 따뜻한 빛 (캐시)
   if(currentTheme === 4) {
     ctx.save();
-    const sunG = ctx.createRadialGradient(W*0.7, 0, 0, W*0.7, 0, H*0.5);
-    sunG.addColorStop(0, `rgba(255,120,60,${0.08*nightMul})`);
-    sunG.addColorStop(0.5, `rgba(255,80,40,${0.03*nightMul})`);
-    sunG.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = sunG;
+    if(!drawBackground._sunGrad || drawBackground._sunNight !== nightMode) {
+      const sunG = ctx.createRadialGradient(W*0.7, 0, 0, W*0.7, 0, H*0.5);
+      sunG.addColorStop(0, `rgba(255,120,60,${0.08*nightMul})`);
+      sunG.addColorStop(0.5, `rgba(255,80,40,${0.03*nightMul})`);
+      sunG.addColorStop(1, 'rgba(0,0,0,0)');
+      drawBackground._sunGrad = sunG;
+      drawBackground._sunNight = nightMode;
+    }
+    ctx.fillStyle = drawBackground._sunGrad;
     ctx.fillRect(0,0,W,H);
     ctx.restore();
   }
@@ -2146,12 +2177,11 @@ function drawBackground() {
   ctx.fillStyle=sandG;
   ctx.fillRect(0,H-80,W,80);
 
-  // 모래 질감
+  // 모래 질감 (사전 생성된 점 배열 사용 - 매 프레임 rand 호출 X)
   ctx.fillStyle = nightMode ? th.sandTexNight : th.sandTex;
-  for(let i=0;i<W;i+=rand(5,12)){
-    const sy = H-rand(5,65);
-    ctx.beginPath(); ctx.arc(i,sy,rand(0.5,1.5),0,TAU); ctx.fill();
-  }
+  ctx.beginPath();
+  for(const d of sandDots) { ctx.moveTo(d.x+d.r, d.y); ctx.arc(d.x, d.y, d.r, 0, TAU); }
+  ctx.fill();
 }
 
 function animate(now) {
@@ -2424,13 +2454,25 @@ function rebuildFishMap() {
 
 // 다른 클라이언트에서 보낸 물고기 위치 수신
 socket.on('fishPositions', (updates) => {
+  const now = Date.now();
   for(const u of updates) {
     const fish = fishById.get(u.id);
     if(fish && fish.ownerId !== myUid) {
-      fish.remoteX = u.x * W;
-      fish.remoteY = u.y * H;
+      const nx = u.x * W, ny = u.y * H;
+      // 이전 업데이트 기준 속도 계산 (dead reckoning용)
+      if(fish.remoteX != null && fish.lastRemoteUpdate) {
+        const dt = (now - fish.lastRemoteUpdate) / 1000;
+        if(dt > 0 && dt < 2) {
+          fish.remoteVx = (nx - fish.remoteX) / dt;
+          fish.remoteVy = (ny - fish.remoteY) / dt;
+        }
+      } else {
+        fish.remoteVx = 0; fish.remoteVy = 0;
+      }
+      fish.remoteX = nx;
+      fish.remoteY = ny;
       fish.dir = u.dir;
-      fish.lastRemoteUpdate = Date.now();
+      fish.lastRemoteUpdate = now;
     }
   }
 });
@@ -2643,10 +2685,12 @@ document.getElementById('btn-jelly').addEventListener('click', () => spawnRandom
 function cycleTheme() {
   currentTheme = (currentTheme + 1) % THEMES.length;
   document.getElementById('btn-theme').textContent = `테마: ${THEMES[currentTheme].name} (T)`;
+  _bgGradTheme = -1; drawBackground._sunGrad = null; // 캐시 초기화
 }
 document.getElementById('btn-theme').addEventListener('click', cycleTheme);
 document.getElementById('btn-night').addEventListener('click', () => {
   nightMode = !nightMode;
+  _bgGradTheme = -1; drawBackground._sunGrad = null; // 캐시 초기화
   document.getElementById('btn-night').classList.toggle('active', nightMode);
 });
 
@@ -2729,7 +2773,7 @@ function updateMyFishList() {
   }
 }
 
-// 내 물고기 위치 주기적 전송 (500ms, 변화 있을 때만)
+// 내 물고기 위치 주기적 전송 (200ms, 변화 있을 때만)
 const lastSentPos = new Map();
 setInterval(() => {
   const myFish = fishes.filter(f => f.ownerId === myUid && !f.dying && !f.dead);
@@ -2746,7 +2790,7 @@ setInterval(() => {
     }
   }
   if(updates.length > 0) socket.emit('fishPositions', updates);
-}, 500);
+}, 200);
 
 // 토스트 알림
 function showToast(msg) {
