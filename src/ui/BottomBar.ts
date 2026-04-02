@@ -7,6 +7,7 @@ import {
   isNightMode, setNightMode,
   getCurrentTheme, setCurrentTheme,
   getMyUid, getMyName,
+  getEditMode, getLoggedNickname, isLoggedIn,
 } from '@/state/store';
 import { THEMES } from '@/config/themes';
 import { SPECIES } from '@/config/species';
@@ -15,6 +16,8 @@ import { foods, invalidateBgCache } from '@/engine/Renderer';
 import { checkFishHover } from '@/engine/FishManager';
 import { emitAddFish, emitFeed, sendCursor } from '@/network/socket';
 import { toggleChat } from './ChatPanel';
+import { navigateToRoom } from '@/engine/router';
+import { showToast } from './Toast';
 
 /** 먹이 주기 */
 function dropFood(x: number, y: number): void {
@@ -101,10 +104,11 @@ export function initBottomBar(): void {
     sendCursor(e.touches[0].clientX, e.touches[0].clientY);
   });
 
-  // 캔버스 클릭 = 먹이 주기
+  // 캔버스 클릭 = 먹이 주기 (편집 모드에서는 비활성)
   addEventListener('click', (e) => {
+    if (getEditMode()) return;
     const target = e.target as HTMLElement;
-    if (target.closest('#top-bar,#bottom-bar,#creator-overlay,#my-fish-panel,#chat-panel,#chat-floating-btn')) return;
+    if (target.closest('#top-bar,#bottom-bar,#creator-overlay,#my-fish-panel,#chat-panel,#chat-floating-btn,#room-editor-panel')) return;
     dropFood(e.clientX, e.clientY);
   });
 
@@ -137,5 +141,20 @@ export function initBottomBar(): void {
     setNightMode(!isNightMode());
     invalidateBgCache();
     document.getElementById('btn-night')!.classList.toggle('active', isNightMode());
+  });
+
+  // 내 방 버튼
+  document.getElementById('btn-my-room')?.addEventListener('click', () => {
+    const name = getLoggedNickname();
+    if (!isLoggedIn() || !name) {
+      showToast('로그인이 필요합니다');
+      return;
+    }
+    navigateToRoom(name);
+  });
+
+  // 로비로 돌아가기 버튼
+  document.getElementById('btn-back-lobby')?.addEventListener('click', () => {
+    location.hash = '';
   });
 }

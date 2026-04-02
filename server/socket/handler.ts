@@ -63,6 +63,31 @@ interface FeedData {
   ownerName: string;
 }
 
+// 소켓별 현재 방 이름 저장
+const socketRoomMap: Map<string, string> = new Map();
+
+// 소켓이 속한 방 이름 가져오기
+function getSocketRoom(socketId: string): string {
+  return socketRoomMap.get(socketId) || 'lobby';
+}
+
+// 방 이름으로 물고기 필터링
+function getFishesForRoom(roomName: string): Array<Fish & { rx?: number; ry?: number }> {
+  return Array.from(fishes.values())
+    .filter((f: Fish) => {
+      if (roomName === 'lobby') {
+        return !f.roomId;
+      }
+      // room:닉네임 형태에서 닉네임 추출 후 해당 방의 물고기 반환
+      // roomId가 있는 물고기는 개인 방에 속한 것
+      return false; // 개인 방 물고기는 DB에서 직접 로드
+    })
+    .map((f: Fish) => ({
+      ...f,
+      ...(f.rx != null ? { rx: f.rx, ry: f.ry } : {}),
+    }));
+}
+
 // ── 소켓 핸들러 등록 ──
 function registerSocketHandlers(io: Server): void {
   io.on('connection', (socket: Socket) => {
@@ -73,13 +98,45 @@ function registerSocketHandlers(io: Server): void {
       socketUidMap.set(socket.id, uid);
     });
 
-    // 기존 물고기 목록 전송 (최신 위치 포함)
-    const fishList: Array<Fish & { rx?: number; ry?: number }> = Array.from(fishes.values()).map(
-      (f: Fish) => ({
+    // 방 참가
+    socket.on('joinRoom', (roomName: string | null) => {
+      // 이전 방 떠나기
+      const prevRoom = socketRoomMap.get(socket.id);
+      if (prevRoom) {
+        socket.leave(prevRoom);
+      }
+
+      // 새 방 참가
+      const newRoom = roomName ? `room:${roomName}` : 'lobby';
+      socket.join(newRoom);
+      socketRoomMap.set(socket.id, newRoom);
+
+      // 해당 방의 물고기 목록 전송
+      const fishList = getFishesForRoom(newRoom);
+      socket.emit('init', fishList);
+
+      console.log(`${socket.id} → ${newRoom} 입장`);
+    });
+
+    // 방 떠나기
+    socket.on('leaveRoom', () => {
+      const currentRoom = socketRoomMap.get(socket.id);
+      if (currentRoom) {
+        socket.leave(currentRoom);
+        socketRoomMap.delete(socket.id);
+      }
+    });
+
+    // 기본적으로 lobby에 참가하고 물고기 목록 전송
+    socket.join('lobby');
+    socketRoomMap.set(socket.id, 'lobby');
+
+    const fishList: Array<Fish & { rx?: number; ry?: number }> = Array.from(fishes.values())
+      .filter((f: Fish) => !f.roomId)
+      .map((f: Fish) => ({
         ...f,
         ...(f.rx != null ? { rx: f.rx, ry: f.ry } : {}),
-      })
-    );
+      }));
     socket.emit('init', fishList);
 
     // 물고기 추가
@@ -130,7 +187,8 @@ function registerSocketHandlers(io: Server): void {
       }
 
       fishes.set(fish.id, fish);
-      io.emit('fishAdded', fish);
+      const room = getSocketRoom(socket.id);
+      io.to(room).emit('fishAdded', fish);
       console.log(
         `물고기 추가: ${fish.name} by ${fish.ownerName}${fish.temporary ? ' (임시)' : ''}${fish.dbId ? ' [DB]' : ''}`
       );
@@ -138,7 +196,7 @@ function registerSocketHandlers(io: Server): void {
       if (fish.temporary && fish.lifespan) {
         setTimeout(() => {
           fishes.delete(fish.id);
-          io.emit('fishRemoved', fish.id);
+          io.to(room).emit('fishRemoved', fish.id);
         }, fish.lifespan * 1000);
       }
     });
@@ -162,7 +220,8 @@ function registerSocketHandlers(io: Server): void {
           }
         }
         fishes.delete(fishId);
-        io.emit('fishRemoved', fishId);
+        const room = getSocketRoom(socket.id);
+        io.to(room).emit('fishRemoved', fishId);
       }
     });
 
@@ -176,7 +235,8 @@ function registerSocketHandlers(io: Server): void {
           fish.dir = u.dir;
         }
       }
-      socket.broadcast.emit('fishPositions', updates);
+      const room = getSocketRoom(socket.id);
+      socket.to(room).emit('fishPositions', updates);
     });
 
     // 채팅 히스토리 전송
@@ -200,12 +260,14 @@ function registerSocketHandlers(io: Server): void {
       };
       chatHistory.push(chatMsg);
       if (chatHistory.length > MAX_CHAT_HISTORY) chatHistory.shift();
-      io.emit('chatMessage', chatMsg);
+      const room = getSocketRoom(socket.id);
+      io.to(room).emit('chatMessage', chatMsg);
     });
 
     // 마우스 커서 공유
     socket.on('cursor', (data: CursorData) => {
-      socket.broadcast.emit('cursorMoved', {
+      const room = getSocketRoom(socket.id);
+      socket.to(room).emit('cursorMoved', {
         id: socket.id,
         x: data.x,
         y: data.y,
@@ -215,14 +277,17 @@ function registerSocketHandlers(io: Server): void {
 
     // 먹이주기
     socket.on('feed', (data: FeedData) => {
-      io.emit('foodDropped', { x: data.x, y: data.y, by: data.ownerName });
+      const room = getSocketRoom(socket.id);
+      io.to(room).emit('foodDropped', { x: data.x, y: data.y, by: data.ownerName });
     });
 
     socket.on('disconnect', () => {
       console.log(`퇴장: ${socket.id}`);
+      const room = getSocketRoom(socket.id);
       chatRateLimit.delete(socket.id);
+      socketRoomMap.delete(socket.id);
       io.emit('onlineCount', io.engine.clientsCount);
-      io.emit('cursorLeft', socket.id);
+      io.to(room).emit('cursorLeft', socket.id);
     });
   });
 }

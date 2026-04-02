@@ -8,7 +8,7 @@ import {
 import { Fish } from '@/entities/Fish';
 import { Food } from '@/entities/Food';
 import {
-  fishes, fishById, addFish, removeFish,
+  fishes, fishById, addFish, removeFish, clearAllFish,
   setFishSortDirty,
 } from '@/engine/FishManager';
 import { foods, remoteCursors } from '@/engine/Renderer';
@@ -94,6 +94,10 @@ export function emitChat(name: string, msg: string): void {
 
 export function emitRegister(uid: string): void {
   socket.emit('register', uid);
+}
+
+export function emitJoinRoom(roomName: string | null): void {
+  socket.emit('joinRoom', roomName);
 }
 
 /** 소켓 초기화 */
@@ -211,6 +215,16 @@ export function initSocket(): void {
 
   socket.on('chatHistory', (msgs: { name: string; msg: string; time: number }[]) => {
     handleChatHistory(msgs);
+  });
+
+  // 방 입장 시 물고기 목록 수신
+  socket.on('roomFishList', (fishList: any[]) => {
+    clearAllFish();
+    for (const data of fishList) {
+      const fish = new Fish(data);
+      addFish(fish);
+    }
+    updateMyFishList();
   });
 
   // 위치 동기화 시작

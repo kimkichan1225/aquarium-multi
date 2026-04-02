@@ -350,3 +350,60 @@ body:hover #bottom-bar{opacity:1}
 }
 @keyframes toastIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
 @keyframes toastOut{to{opacity:0;transform:translateY(-10px)}}
+
+/* 방 꾸미기 에디터 패널 */
+#room-editor-panel{
+  position:fixed;right:0;top:48px;bottom:52px;width:260px;
+  background:rgba(5,15,35,0.9);backdrop-filter:blur(12px);
+  border-left:1px solid rgba(100,180,255,0.1);
+  z-index:200;transform:translateX(100%);transition:transform 0.3s;
+  overflow-y:auto;padding:16px 12px;
+  display:flex;flex-direction:column;
+}
+#room-editor-panel.open{transform:translateX(0)}
+#room-editor-panel h3{
+  color:rgba(140,200,255,0.6);font-size:12px;letter-spacing:1px;
+  margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;
+}
+#room-editor-panel .panel-close{
+  background:none;border:none;color:rgba(140,200,255,0.5);font-size:16px;
+  cursor:pointer;padding:2px 6px;border-radius:4px;
+}
+#room-editor-panel .panel-close:hover{color:#fff;background:rgba(255,255,255,0.1)}
+
+.theme-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:6px;
+}
+.theme-card{
+  padding:8px;border-radius:8px;cursor:pointer;
+  background:rgba(20,40,70,0.3);border:1px solid rgba(100,180,255,0.08);
+  color:rgba(180,220,255,0.7);font-size:10px;text-align:center;
+  transition:all 0.3s;
+}
+.theme-card:hover{background:rgba(30,60,100,0.4);border-color:rgba(100,180,255,0.2)}
+.theme-card.active{border-color:rgba(100,220,160,0.4);background:rgba(60,180,120,0.15)}
+
+.editor-section{margin-bottom:14px}
+.editor-section label{color:rgba(140,200,255,0.5);font-size:11px;display:block;margin-bottom:6px}
+
+.deco-buttons{display:flex;gap:6px}
+.deco-buttons .btn.selected{border-color:rgba(100,220,160,0.4);background:rgba(60,180,120,0.15);color:rgba(130,230,170,0.8)}
+
+.deco-item{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:6px 8px;background:rgba(20,40,70,0.3);
+  border:1px solid rgba(100,180,255,0.08);border-radius:6px;
+  margin-bottom:4px;font-size:10px;color:rgba(180,220,255,0.6);
+}
+.deco-item .deco-remove{
+  background:rgba(255,80,80,0.15);border:1px solid rgba(255,80,80,0.2);
+  border-radius:4px;color:rgba(255,120,120,0.7);font-size:9px;
+  padding:2px 6px;cursor:pointer;
+}
+.deco-item .deco-remove:hover{background:rgba(255,80,80,0.3)}
+
+#room-info{display:flex;align-items:center;gap:8px}
+#room-name{color:rgba(140,200,255,0.7);font-size:11px;letter-spacing:0.5px}
+
+/* 편집 모드 그리드 오버레이 */
+#c.edit-mode{cursor:crosshair}

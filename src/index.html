@@ -39,6 +39,11 @@
 <div id="top-bar">
   <h1>MULTI AQUARIUM</h1>
   <div style="display:flex;align-items:center;gap:14px">
+    <div id="room-info" style="display:none">
+      <span id="room-name"></span>
+      <button class="btn" id="btn-back-lobby" style="font-size:10px;padding:4px 10px">로비로</button>
+      <button class="btn" id="btn-edit-room" style="font-size:10px;padding:4px 10px;display:none">꾸미기</button>
+    </div>
     <div class="info">
       <span id="online-count">0</span> 접속 &nbsp;│&nbsp;
       <span id="fish-total">0</span> 마리
@@ -63,6 +68,7 @@
   <button class="btn primary" id="btn-create">+ 물고기 만들기</button>
   <button class="btn" id="btn-feed">먹이주기 (F)</button>
   <button class="btn" id="btn-my-fish">내 물고기</button>
+  <button class="btn" id="btn-my-room">내 방</button>
   <button class="btn" id="btn-random">야생 물고기 (A)</button>
   <button class="btn" id="btn-jelly">해파리 (J)</button>
   <button class="btn" id="btn-theme">테마: 산호초 (T)</button>
@@ -147,6 +153,29 @@
   <div id="chat-input-area">
     <input type="text" id="chat-input" placeholder="메시지 입력..." maxlength="100" autocomplete="off">
     <button id="chat-send">전송</button>
+  </div>
+</div>
+
+<!-- 방 꾸미기 에디터 -->
+<div id="room-editor-panel">
+  <h3>방 꾸미기 <button class="panel-close" id="btn-close-editor">&times;</button></h3>
+  <div id="editor-content">
+    <div class="editor-section">
+      <label>테마</label>
+      <div id="theme-selector" class="theme-grid"></div>
+    </div>
+    <div class="editor-section">
+      <label>장식물 추가</label>
+      <div class="deco-buttons">
+        <button class="btn" id="btn-add-seaweed">수초</button>
+        <button class="btn" id="btn-add-coral">산호</button>
+      </div>
+    </div>
+    <div class="editor-section">
+      <label>배치된 장식물</label>
+      <div id="deco-list"></div>
+    </div>
+    <button class="btn primary" id="btn-save-room" style="width:100%">저장</button>
   </div>
 </div>
 

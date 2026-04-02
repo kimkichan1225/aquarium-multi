@@ -18,6 +18,13 @@ export function setFishSortDirty(v: boolean): void { fishSortDirty = v; }
 export let lastFishCount = 0;
 export function setLastFishCount(v: number): void { lastFishCount = v; }
 
+/** 모든 물고기 제거 */
+export function clearAllFish(): void {
+  fishes.length = 0;
+  fishById.clear();
+  fishSortDirty = true;
+}
+
 /** 물고기 추가 */
 export function addFish(fish: Fish): void {
   fishes.push(fish);

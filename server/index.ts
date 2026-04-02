@@ -6,6 +6,7 @@ import { initDB, loadFishFromDB } from './db';
 import { fishes, getNextFishId, setNextFishId } from './socket/state';
 import { registerSocketHandlers } from './socket/handler';
 import authRouter from './routes/auth';
+import roomRouter from './routes/room';
 import createAdminRouter from './routes/admin';
 
 const app: Express = express();
@@ -24,6 +25,7 @@ app.use(express.json());
 
 // ── 라우터 연결 ──
 app.use('/api', authRouter);
+app.use('/api', roomRouter);
 app.use('/admin', createAdminRouter(io));
 
 // ── 소켓 핸들러 등록 ──

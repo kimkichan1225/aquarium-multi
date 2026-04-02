@@ -71,6 +71,24 @@ let currentTheme = 1;
 export function getCurrentTheme(): number { return currentTheme; }
 export function setCurrentTheme(idx: number): void { currentTheme = idx; }
 
+// 현재 방 (null = 로비/공유 수조, 'nickname' = 개인 방)
+let currentRoom: string | null = null;
+
+export function getCurrentRoom(): string | null { return currentRoom; }
+export function setCurrentRoom(room: string | null): void { currentRoom = room; }
+
+// 현재 방의 주인인지 여부
+let isRoomOwner = false;
+
+export function getIsRoomOwner(): boolean { return isRoomOwner; }
+export function setIsRoomOwner(v: boolean): void { isRoomOwner = v; }
+
+// 방 꾸미기 편집 모드
+let editMode = false;
+
+export function getEditMode(): boolean { return editMode; }
+export function setEditMode(v: boolean): void { editMode = v; }
+
 // 프록시 객체 (엔티티 클래스에서 store.W 형태로 접근 가능)
 export const store = {
   get W() { return W; },
@@ -85,4 +103,7 @@ export const store = {
   get time() { return time; },
   get frameCount() { return frameCount; },
   get currentTheme() { return currentTheme; },
+  get currentRoom() { return currentRoom; },
+  get isRoomOwner() { return isRoomOwner; },
+  get editMode() { return editMode; },
 };

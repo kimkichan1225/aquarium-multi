@@ -31,7 +31,50 @@ async function initDB(): Promise<void> {
       created_at TIMESTAMP DEFAULT NOW()
     )
   `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS rooms (
+      id SERIAL PRIMARY KEY,
+      owner_nickname VARCHAR(20) UNIQUE REFERENCES users(nickname),
+      theme INT DEFAULT 1,
+      night_mode BOOLEAN DEFAULT false,
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS room_decorations (
+      id SERIAL PRIMARY KEY,
+      room_id INT REFERENCES rooms(id) ON DELETE CASCADE,
+      type VARCHAR(20) NOT NULL,
+      x FLOAT NOT NULL,
+      size FLOAT DEFAULT 1.0,
+      variant INT DEFAULT 0,
+      color1 VARCHAR(20),
+      color2 VARCHAR(20),
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
+  await pool.query(`ALTER TABLE fish ADD COLUMN IF NOT EXISTS room_id INT REFERENCES rooms(id)`);
   console.log('DB 테이블 준비 완료');
+}
+
+// 방 타입
+export interface Room {
+  id: number;
+  ownerNickname: string;
+  theme: number;
+  nightMode: boolean;
+}
+
+// 방 장식물 타입
+export interface RoomDecoration {
+  id: number;
+  roomId: number;
+  type: string;   // 'seaweed' | 'coral'
+  x: number;      // 0~1 비율
+  size: number;
+  variant: number;
+  color1: string | null;
+  color2: string | null;
 }
 
 // DB 물고기 행 타입
@@ -46,6 +89,7 @@ export interface FishRow {
   x: number;
   y: number;
   dir: number;
+  room_id: number | null;
   created_at: Date;
 }
 
@@ -63,6 +107,7 @@ export interface Fish {
   x: number;
   y: number;
   dir: number;
+  roomId?: number | null;
   temporary: boolean;
   lifespan?: number | null;
   createdAt: number | Date;
@@ -91,6 +136,7 @@ async function loadFishFromDB(
       x: row.x,
       y: row.y,
       dir: row.dir,
+      roomId: row.room_id,
       temporary: false,
       createdAt: row.created_at,
     };
