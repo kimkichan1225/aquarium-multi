@@ -9,6 +9,14 @@ let chatInput: HTMLInputElement;
 let chatFloatingBtn: HTMLElement;
 let chatUnread = 0;
 
+// 마지막으로 읽은 메시지 시간 (localStorage 유지)
+function getLastReadTime(): number {
+  return parseInt(localStorage.getItem('chat-last-read') || '0', 10);
+}
+function setLastReadTime(t: number): void {
+  localStorage.setItem('chat-last-read', String(t));
+}
+
 /** HTML 이스케이프 */
 function escapeHtml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -36,6 +44,7 @@ export function toggleChat(): void {
   chatFloatingBtn.style.display = isOpen ? 'none' : 'flex';
   if (isOpen) {
     chatUnread = 0;
+    setLastReadTime(Date.now());
     updateChatBadge();
     chatInput.focus();
     chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -58,15 +67,19 @@ export function addChatMessage(data: { name: string; msg: string; time: number }
   }
 }
 
-/** 채팅 히스토리 수신 처리 (뱃지 없이) */
+/** 채팅 히스토리 수신 처리 (lastReadTime 기준 뱃지) */
 export function handleChatHistory(msgs: { name: string; msg: string; time: number }[]): void {
   chatMessages.innerHTML = '';
+  const lastRead = getLastReadTime();
   chatUnread = 0;
   for (const m of msgs) {
     const el = document.createElement('div');
     el.className = 'chat-msg';
     el.innerHTML = `<span class="chat-name">${m.name}</span><span class="chat-text">${escapeHtml(m.msg)}</span>`;
     chatMessages.appendChild(el);
+    if (m.time > lastRead && !chatPanel.classList.contains('open')) {
+      chatUnread++;
+    }
   }
   chatMessages.scrollTop = chatMessages.scrollHeight;
   updateChatBadge();
