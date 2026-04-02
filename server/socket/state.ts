@@ -10,6 +10,7 @@ export interface ChatMessage {
   name: string;
   msg: string;
   time: number;
+  type?: 'invite'; // 초대장 타입
 }
 
 const chatHistory: ChatMessage[] = [];

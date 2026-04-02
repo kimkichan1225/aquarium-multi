@@ -301,6 +301,10 @@ function registerSocketHandlers(io: Server): void {
       const lastInvite = chatRateLimit.get(`invite:${socket.id}`) || 0;
       if (now - lastInvite < 10000) return;
       chatRateLimit.set(`invite:${socket.id}`, now);
+      // 히스토리에 저장 (로비 재입장 시에도 보이도록)
+      const inviteMsg = { name, msg: '', time: now, type: 'invite' as const };
+      chatHistory.push(inviteMsg);
+      if (chatHistory.length > MAX_CHAT_HISTORY) chatHistory.shift();
       io.to('lobby').emit('inviteCard', { name, time: now });
       console.log(`초대장: ${name}`);
     });

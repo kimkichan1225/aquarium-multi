@@ -102,12 +102,14 @@ export function removeChatMessage(time: number): void {
 }
 
 /** 채팅 히스토리 수신 처리 (lastReadTime 기준 뱃지) */
-export function handleChatHistory(msgs: { name: string; msg: string; time: number }[]): void {
+export function handleChatHistory(msgs: { name: string; msg: string; time: number; type?: string }[]): void {
   chatMessages.innerHTML = '';
   const lastRead = getLastReadTime();
   chatUnread = 0;
   for (const m of msgs) {
-    const el = createChatMsgEl(m);
+    const el = m.type === 'invite'
+      ? createInviteCardEl({ name: m.name, time: m.time })
+      : createChatMsgEl(m);
     chatMessages.appendChild(el);
     if (m.time > lastRead && !chatPanel.classList.contains('open')) {
       chatUnread++;
@@ -117,8 +119,8 @@ export function handleChatHistory(msgs: { name: string; msg: string; time: numbe
   updateChatBadge();
 }
 
-/** 초대 카드 추가 */
-export function addInviteCard(data: { name: string; time: number }): void {
+/** 초대 카드 엘리먼트 생성 */
+function createInviteCardEl(data: { name: string; time: number }): HTMLElement {
   const el = document.createElement('div');
   el.className = 'invite-card';
 
@@ -145,6 +147,12 @@ export function addInviteCard(data: { name: string; time: number }): void {
   el.appendChild(fish);
   el.appendChild(info);
   el.appendChild(btn);
+  return el;
+}
+
+/** 초대 카드 추가 (실시간 수신) */
+export function addInviteCard(data: { name: string; time: number }): void {
+  const el = createInviteCardEl(data);
   chatMessages.appendChild(el);
 
   const isNearBottom = chatMessages.scrollHeight - chatMessages.scrollTop - chatMessages.clientHeight < 60;
