@@ -235,8 +235,13 @@
   #my-fish-panel.open{transform:translateX(0)}
   #my-fish-panel h3{
     color:rgba(140,200,255,0.6);font-size:12px;letter-spacing:1px;
-    margin-bottom:12px;
+    margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;
   }
+  #my-fish-panel .panel-close{
+    background:none;border:none;color:rgba(140,200,255,0.5);font-size:16px;
+    cursor:pointer;padding:2px 6px;border-radius:4px;
+  }
+  #my-fish-panel .panel-close:hover{color:#fff;background:rgba(255,255,255,0.1);}
   .my-fish-item{
     display:flex;align-items:center;gap:8px;
     padding:8px 10px;background:rgba(20,40,70,0.3);
@@ -405,7 +410,7 @@
 
 <!-- 내 물고기 패널 -->
 <div id="my-fish-panel">
-  <h3>내 물고기</h3>
+  <h3>내 물고기 <button class="panel-close" id="btn-close-fish-panel">&times;</button></h3>
   <div id="my-fish-list"></div>
 </div>
 
@@ -2506,6 +2511,9 @@ document.getElementById('btn-night').addEventListener('click', () => {
 const myFishPanel = document.getElementById('my-fish-panel');
 document.getElementById('btn-my-fish').addEventListener('click', () => {
   myFishPanel.classList.toggle('open');
+});
+document.getElementById('btn-close-fish-panel').addEventListener('click', () => {
+  myFishPanel.classList.remove('open');
 });
 
 function updateMyFishList() {
