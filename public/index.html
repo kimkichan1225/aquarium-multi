@@ -1043,94 +1043,108 @@ const SPECIES = [
     customDraw: true,
     defaultColors: {body:'#7A2E2B',fin:'#8B3A36',belly:'#E8C4BC',accent:'#5C1F1D'},
     draw(ctx, sz, p, tw, fw, t) {
-      const wingFlap = Math.sin(t * 1.5) * 0.15;
+      const wingPulse = Math.sin(t * 1.5) * 0.06;
 
-      // 긴 꼬리 (가느다란 채찍형)
-      ctx.save(); ctx.translate(-sz*0.4, sz*0.05);
-      const tailWv = Math.sin(t * 2) * sz * 0.08;
+      // 긴 꼬리
+      ctx.save(); ctx.translate(-sz*0.45, 0);
+      const tailWv = Math.sin(t * 2) * sz * 0.06;
       ctx.beginPath();
       ctx.moveTo(0, 0);
-      ctx.bezierCurveTo(-sz*0.3, tailWv*0.5, -sz*0.6, tailWv, -sz*0.95, tailWv*1.2);
+      ctx.bezierCurveTo(-sz*0.25, tailWv*0.5, -sz*0.55, tailWv, -sz*0.85, tailWv*1.2);
       ctx.strokeStyle = p.accent;
-      ctx.lineWidth = sz * 0.025;
+      ctx.lineWidth = sz * 0.02;
       ctx.lineCap = 'round';
       ctx.stroke();
       ctx.restore();
 
-      // 위 날개 (등 쪽, 크게 삼각형으로 솟음 - 이미지 핵심 형태)
-      ctx.save();
-      ctx.transform(1, wingFlap*0.8, 0, 1, 0, 0);
+      // 몸 전체 (하나의 넓은 다이아몬드/카이트 형태)
+      // 위쪽(등) - 어두운 색
       ctx.fillStyle = p.body;
       ctx.beginPath();
-      ctx.moveTo(sz*0.3, -sz*0.08);
-      ctx.bezierCurveTo(sz*0.2, -sz*0.25, sz*0.0, -sz*0.6, -sz*0.15, -sz*0.85);
-      ctx.bezierCurveTo(-sz*0.22, -sz*0.88, -sz*0.3, -sz*0.78, -sz*0.38, -sz*0.6);
-      ctx.bezierCurveTo(-sz*0.42, -sz*0.4, -sz*0.4, -sz*0.2, -sz*0.35, -sz*0.05);
-      ctx.lineTo(-sz*0.2, sz*0.02);
+      // 머리 앞쪽 중앙
+      ctx.moveTo(sz*0.4, 0);
+      // 머리에서 위로 올라가며 날개 윗끝으로
+      ctx.bezierCurveTo(sz*0.35, -sz*0.1, sz*0.15, -sz*0.35, -sz*0.05, -sz*0.55);
+      // 날개 윗끝에서 뒤쪽 끝으로 (뒤로 길게 뻗음)
+      ctx.bezierCurveTo(-sz*0.15, -sz*0.6, -sz*0.3, -sz*0.5, -sz*0.45, -sz*0.3);
+      // 뒤쪽에서 꼬리 연결부로
+      ctx.bezierCurveTo(-sz*0.52, -sz*0.15, -sz*0.5, -sz*0.05, -sz*0.45, 0);
       ctx.closePath(); ctx.fill();
-      // 흰 점무늬 (위 날개)
+
+      // 아래쪽(배) - 밝은 색
       ctx.fillStyle = p.belly;
-      const uDots = [
-        [0.15,-0.18],[0.08,-0.3],[0.0,-0.42],[-0.08,-0.52],[-0.12,-0.65],
-        [-0.05,-0.2],[0.1,-0.4],[-0.15,-0.4],[-0.2,-0.55],[-0.25,-0.45],
-        [-0.18,-0.7],[-0.08,-0.35],[-0.28,-0.35],[0.05,-0.55],[-0.22,-0.6],
-        [-0.1,-0.25],[-0.3,-0.25],[-0.02,-0.5],[-0.15,-0.15],[-0.35,-0.15],
-        [0.2,-0.12],[-0.06,-0.72],[-0.32,-0.5],[-0.25,-0.2],[0.12,-0.25]
+      ctx.beginPath();
+      ctx.moveTo(sz*0.4, 0);
+      // 머리에서 아래로 내려가며 날개 아랫끝으로
+      ctx.bezierCurveTo(sz*0.38, sz*0.08, sz*0.25, sz*0.25, sz*0.08, sz*0.38);
+      // 날개 아랫끝에서 뒤쪽으로
+      ctx.bezierCurveTo(-sz*0.05, sz*0.42, -sz*0.2, sz*0.35, -sz*0.32, sz*0.2);
+      // 뒤쪽에서 꼬리 연결부로
+      ctx.bezierCurveTo(-sz*0.4, sz*0.1, -sz*0.45, sz*0.03, -sz*0.45, 0);
+      ctx.closePath(); ctx.fill();
+
+      // 등-배 경계 그라데이션 (자연스럽게 섞이도록)
+      const midGrad = ctx.createLinearGradient(0, -sz*0.05, 0, sz*0.05);
+      midGrad.addColorStop(0, p.body + '88');
+      midGrad.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = midGrad;
+      ctx.beginPath();
+      ctx.moveTo(sz*0.4, -sz*0.02);
+      ctx.lineTo(-sz*0.45, -sz*0.02);
+      ctx.lineTo(-sz*0.45, sz*0.04);
+      ctx.lineTo(sz*0.4, sz*0.04);
+      ctx.closePath(); ctx.fill();
+
+      // 등 쪽 점무늬
+      ctx.fillStyle = p.belly;
+      const dots = [
+        [0.25,-0.1],[0.15,-0.2],[0.05,-0.32],[-0.05,-0.42],[-0.15,-0.48],
+        [0.2,-0.15],[0.08,-0.25],[-0.02,-0.38],[-0.12,-0.45],[-0.25,-0.38],
+        [-0.3,-0.25],[-0.38,-0.15],[-0.35,-0.3],[-0.2,-0.2],[-0.08,-0.15],
+        [-0.42,-0.08],[0.3,-0.06],[-0.1,-0.35],[-0.28,-0.12],[0.1,-0.12],
+        [-0.18,-0.5],[-0.32,-0.4],[-0.45,-0.05],[0.22,-0.18],[-0.22,-0.3]
       ];
-      for(const [dx,dy] of uDots) {
+      for(const [dx,dy] of dots) {
         ctx.beginPath();
-        ctx.arc(sz*dx, sz*dy, sz*0.016 + Math.random()*sz*0.005, 0, TAU);
+        ctx.arc(sz*dx, sz*dy, sz*0.014 + Math.random()*sz*0.004, 0, TAU);
         ctx.fill();
       }
-      ctx.restore();
 
-      // 아래 날개 (배 쪽, 밝은 분홍 - 삼각형 형태)
-      ctx.save();
-      ctx.transform(1, -wingFlap*0.5, 0, 1, 0, 0);
-      ctx.fillStyle = p.belly;
-      ctx.beginPath();
-      ctx.moveTo(sz*0.3, sz*0.08);
-      ctx.bezierCurveTo(sz*0.25, sz*0.2, sz*0.1, sz*0.4, -sz*0.05, sz*0.55);
-      ctx.bezierCurveTo(-sz*0.12, sz*0.56, -sz*0.22, sz*0.48, -sz*0.28, sz*0.35);
-      ctx.bezierCurveTo(-sz*0.32, sz*0.22, -sz*0.3, sz*0.1, -sz*0.2, sz*0.02);
-      ctx.closePath(); ctx.fill();
-      // 아래 날개에 연한 점
-      ctx.fillStyle = p.body + '33';
-      const dDots = [[0.1,0.18],[0.0,0.28],[-0.08,0.35],[-0.15,0.3],[0.15,0.12],[-0.05,0.2]];
-      for(const [dx,dy] of dDots) {
+      // 아가미 슬릿 (배 쪽에 작은 선들)
+      ctx.strokeStyle = p.accent + '66';
+      ctx.lineWidth = sz * 0.008;
+      for(let i = 0; i < 3; i++) {
+        const gx = sz * (0.08 - i * 0.06);
         ctx.beginPath();
-        ctx.arc(sz*dx, sz*dy, sz*0.012, 0, TAU);
-        ctx.fill();
+        ctx.moveTo(gx, sz*0.08);
+        ctx.lineTo(gx, sz*0.14);
+        ctx.stroke();
       }
-      ctx.restore();
 
-      // 중앙 몸통 (납작, 위는 어둡고 아래는 밝음)
-      const bg = ctx.createLinearGradient(0, -sz*0.1, 0, sz*0.12);
-      bg.addColorStop(0, p.body); bg.addColorStop(0.45, p.fin); bg.addColorStop(1, p.belly);
-      ctx.fillStyle = bg;
+      // 머리 뿔 (두갈래 세팔릭 핀, 위아래로)
+      ctx.fillStyle = p.body;
+      // 위쪽 뿔
       ctx.beginPath();
-      ctx.moveTo(sz*0.38, 0);
-      ctx.bezierCurveTo(sz*0.35, -sz*0.08, sz*0.15, -sz*0.12, -sz*0.15, -sz*0.08);
-      ctx.bezierCurveTo(-sz*0.3, -sz*0.04, -sz*0.4, 0, -sz*0.35, sz*0.04);
-      ctx.bezierCurveTo(-sz*0.15, sz*0.08, sz*0.15, sz*0.12, sz*0.35, sz*0.08);
+      ctx.moveTo(sz*0.38, -sz*0.04);
+      ctx.bezierCurveTo(sz*0.44, -sz*0.08, sz*0.5, -sz*0.12, sz*0.52, -sz*0.1);
+      ctx.bezierCurveTo(sz*0.5, -sz*0.06, sz*0.44, -sz*0.02, sz*0.38, -sz*0.02);
       ctx.closePath(); ctx.fill();
-
-      // 뾰족한 주둥이
+      // 아래쪽 뿔
       ctx.fillStyle = p.belly;
       ctx.beginPath();
-      ctx.moveTo(sz*0.38, 0);
-      ctx.bezierCurveTo(sz*0.45, -sz*0.015, sz*0.5, -sz*0.005, sz*0.5, 0);
-      ctx.bezierCurveTo(sz*0.5, sz*0.005, sz*0.45, sz*0.015, sz*0.38, 0);
+      ctx.moveTo(sz*0.38, sz*0.04);
+      ctx.bezierCurveTo(sz*0.44, sz*0.08, sz*0.5, sz*0.12, sz*0.52, sz*0.1);
+      ctx.bezierCurveTo(sz*0.5, sz*0.06, sz*0.44, sz*0.02, sz*0.38, sz*0.02);
       ctx.closePath(); ctx.fill();
 
-      // 눈 (작고 검은 점)
+      // 눈 (등 쪽에)
       ctx.fillStyle = '#1A1A1A';
       ctx.beginPath();
-      ctx.arc(sz*0.38, -sz*0.03, sz*0.025, 0, TAU);
+      ctx.arc(sz*0.32, -sz*0.08, sz*0.025, 0, TAU);
       ctx.fill();
-      ctx.fillStyle = 'rgba(255,255,255,0.7)';
+      ctx.fillStyle = 'rgba(255,255,255,0.6)';
       ctx.beginPath();
-      ctx.arc(sz*0.375, -sz*0.035, sz*0.008, 0, TAU);
+      ctx.arc(sz*0.315, -sz*0.085, sz*0.008, 0, TAU);
       ctx.fill();
     }
   },
