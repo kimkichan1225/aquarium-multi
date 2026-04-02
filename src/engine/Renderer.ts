@@ -16,6 +16,10 @@ import { Bubble } from '@/entities/Bubble';
 let cv: HTMLCanvasElement;
 let ctx: CanvasRenderingContext2D;
 
+// ── 빛줄기 (갓레이) 개별 속성 ──
+interface LightRay { x: number; width: number; opacity: number; speed: number; angle: number; phase: number; }
+const lightRays: LightRay[] = [];
+
 /** 메인 캔버스 컨텍스트 (외부 모듈에서 참조) */
 export function getCtx(): CanvasRenderingContext2D { return ctx; }
 export function getCanvas(): HTMLCanvasElement { return cv; }
@@ -91,26 +95,25 @@ function drawBackground(): void {
 
   // 빛줄기 (갓레이)
   ctx.save();
-  const lightCount = nightMode ? 3 : 6;
-  const baseAlpha = nightMode ? 0.055 : 0.11;
-  for (let i = 0; i < lightCount; i++) {
-    const lx = W * 0.07 + i * (W / lightCount) + Math.sin(time * 0.22 + i * 1.3) * 45;
-    const topW = 12 + Math.sin(time * 0.38 + i * 2.0) * 7;
-    const botW = topW * 5.5;
-    // 위→아래 점점 투명해지는 그라데이션
-    const grad = ctx.createLinearGradient(lx, 0, lx, H);
-    grad.addColorStop(0,    th.light + baseAlpha + ')');
-    grad.addColorStop(0.45, th.light + (baseAlpha * 0.45) + ')');
-    grad.addColorStop(0.8,  th.light + (baseAlpha * 0.1) + ')');
-    grad.addColorStop(1,    th.light + '0)');
-    ctx.fillStyle = grad;
+  for (const ray of lightRays) {
+    const flicker = 0.5 + 0.5 * Math.sin(time * ray.speed + ray.phase);
+    ctx.globalAlpha = ray.opacity * flicker * (nightMode ? 0.3 : 1);
+    ctx.save();
+    ctx.translate(ray.x + Math.sin(time * 0.2 + ray.phase) * 20, 0);
+    ctx.rotate(ray.angle);
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0,   th.light + '0.4)');
+    g.addColorStop(0.3, th.light + '0.15)');
+    g.addColorStop(1,   th.light + '0)');
+    ctx.fillStyle = g;
     ctx.beginPath();
-    ctx.moveTo(lx - topW, 0);
-    ctx.lineTo(lx + topW, 0);
-    ctx.lineTo(lx + botW, H);
-    ctx.lineTo(lx - botW, H);
+    ctx.moveTo(-ray.width / 2, -50);
+    ctx.lineTo( ray.width / 2, -50);
+    ctx.lineTo( ray.width * 1.5, H);
+    ctx.lineTo(-ray.width, H);
     ctx.closePath();
     ctx.fill();
+    ctx.restore();
   }
   ctx.restore();
 
@@ -272,12 +275,29 @@ function resize(): void {
   setSize(W, H);
 }
 
+/** 빛줄기 데이터 초기화 */
+function initLightRays(): void {
+  const W = getW();
+  lightRays.length = 0;
+  for (let i = 0; i < 8; i++) {
+    lightRays.push({
+      x: rand(0, W),
+      width: rand(30, 120),
+      opacity: rand(0.02, 0.06),
+      speed: rand(0.1, 0.3),
+      angle: rand(-0.15, 0.15),
+      phase: rand(0, TAU),
+    });
+  }
+}
+
 /** 렌더러 초기화 */
 export function initRenderer(): void {
   cv = document.getElementById('c') as HTMLCanvasElement;
   ctx = cv.getContext('2d')!;
   resize();
   initEnvironment(ctx);
+  initLightRays();
 
   addEventListener('resize', () => {
     resize();
