@@ -169,7 +169,7 @@ function animate(now: number): void {
   }
 
   // 물고기 업데이트
-  for (const f of fishes) f.update(dt);
+  for (const f of fishes) f.update(dt, foods);
 
   // 죽은 임시 물고기 제거
   for (let i = fishes.length - 1; i >= 0; i--) {
