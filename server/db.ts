@@ -54,6 +54,11 @@ async function initDB(): Promise<void> {
     )
   `);
   await pool.query(`ALTER TABLE fish ADD COLUMN IF NOT EXISTS room_id INT REFERENCES rooms(id)`);
+  await pool.query(`ALTER TABLE room_decorations ADD COLUMN IF NOT EXISTS coral_color VARCHAR(20)`);
+  await pool.query(`ALTER TABLE room_decorations ADD COLUMN IF NOT EXISTS base_segments INT`);
+  await pool.query(`ALTER TABLE room_decorations ADD COLUMN IF NOT EXISTS base_seg_len FLOAT`);
+  await pool.query(`ALTER TABLE room_decorations ADD COLUMN IF NOT EXISTS base_width FLOAT`);
+  await pool.query(`ALTER TABLE room_decorations ADD COLUMN IF NOT EXISTS base_size FLOAT`);
   await pool.query(`
     CREATE TABLE IF NOT EXISTS chat_messages (
       id SERIAL PRIMARY KEY,
@@ -78,12 +83,17 @@ export interface Room {
 export interface RoomDecoration {
   id: number;
   roomId: number;
-  type: string;   // 'seaweed' | 'coral'
-  x: number;      // 0~1 비율
+  type: string;
+  x: number;
   size: number;
   variant: number;
   color1: string | null;
   color2: string | null;
+  coralColor: string | null;
+  baseSegments: number | null;
+  baseSegLen: number | null;
+  baseWidth: number | null;
+  baseSize: number | null;
 }
 
 // DB 물고기 행 타입

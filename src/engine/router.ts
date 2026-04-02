@@ -12,7 +12,7 @@ import { seaweeds, corals, initEnvironment } from './Environment';
 import { getCtx } from './Renderer';
 import { invalidateBgCache } from './Renderer';
 import { showToast } from '@/ui/Toast';
-import { closeEditor } from '@/ui/RoomEditor';
+import { closeEditor, setEditorDecorations } from '@/ui/RoomEditor';
 import { Seaweed } from '@/entities/Seaweed';
 import { Coral } from '@/entities/Coral';
 import { getW, getH } from '@/state/store';
@@ -148,17 +148,22 @@ function enterLobby(): void {
 export interface Decoration {
   id?: number;
   type: 'seaweed' | 'coral';
-  x: number;        // 0~1 비율
-  size: number;      // 크기 배율
-  variant: number;   // 종류 변형 (0~2)
-  color1?: string;
-  color2?: string;
+  x: number;           // 0~1 비율
+  size: number;         // 크기 배율 (0.3 ~ 2.5)
+  variant: number;      // 산호 종류 (0~2)
+  color1?: string;      // 수초 색상1
+  color2?: string;      // 수초 색상2
+  coralColor?: string;  // 산호 색상
+  // 기본 랜덤값 (재현을 위해 저장)
+  baseSegments?: number;
+  baseSegLen?: number;
+  baseWidth?: number;
+  baseSize?: number;
 }
 
 export function applyDecorations(decorations: Decoration[]): void {
   const ctx = getCtx();
   const W = getW();
-  const H = getH();
 
   seaweeds.length = 0;
   corals.length = 0;
@@ -166,19 +171,24 @@ export function applyDecorations(decorations: Decoration[]): void {
   for (const d of decorations) {
     const px = d.x * W;
     if (d.type === 'seaweed') {
-      const sw = new Seaweed(px, ctx);
-      // 크기 배율 적용
-      sw.segLen *= d.size;
-      sw.width *= d.size;
-      if (d.color1) sw.color1 = d.color1;
-      if (d.color2) sw.color2 = d.color2;
+      const sw = new Seaweed(px, ctx, {
+        segments: d.baseSegments,
+        segLen: d.baseSegLen != null ? d.baseSegLen * d.size : undefined,
+        width: d.baseWidth != null ? d.baseWidth * d.size : undefined,
+        color1: d.color1,
+        color2: d.color2,
+      });
       seaweeds.push(sw);
     } else if (d.type === 'coral') {
-      const co = new Coral(px);
-      co.size *= d.size;
-      co.type = d.variant;
-      seaweeds; // 산호 타입 재설정 시 branches 재생성은 생략 (기본 렌더)
+      const co = new Coral(px, {
+        type: d.variant,
+        size: d.baseSize != null ? d.baseSize * d.size : undefined,
+        color: d.coralColor,
+      });
       corals.push(co);
     }
   }
+
+  // 에디터에 장식물 데이터 동기화
+  setEditorDecorations(decorations);
 }

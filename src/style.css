@@ -390,11 +390,12 @@ body:hover #bottom-bar{opacity:1}
 .deco-buttons{display:flex;gap:6px}
 .deco-buttons .btn.selected{border-color:rgba(100,220,160,0.4);background:rgba(60,180,120,0.15);color:rgba(130,230,170,0.8)}
 
+.deco-item-wrap{margin-bottom:4px}
 .deco-item{
   display:flex;align-items:center;justify-content:space-between;
   padding:6px 8px;background:rgba(20,40,70,0.3);
   border:1px solid rgba(100,180,255,0.08);border-radius:6px;
-  margin-bottom:4px;font-size:10px;color:rgba(180,220,255,0.6);
+  font-size:10px;color:rgba(180,220,255,0.6);
 }
 .deco-item .deco-remove{
   background:rgba(255,80,80,0.15);border:1px solid rgba(255,80,80,0.2);
@@ -402,6 +403,66 @@ body:hover #bottom-bar{opacity:1}
   padding:2px 6px;cursor:pointer;
 }
 .deco-item .deco-remove:hover{background:rgba(255,80,80,0.3)}
+.deco-item .deco-edit{
+  background:rgba(100,180,255,0.1);border:1px solid rgba(100,180,255,0.2);
+  border-radius:4px;color:rgba(140,200,255,0.7);font-size:9px;
+  padding:2px 6px;cursor:pointer;
+}
+.deco-item .deco-edit:hover{background:rgba(100,180,255,0.2)}
+.deco-item .deco-edit.active{
+  background:rgba(100,220,160,0.15);border-color:rgba(100,220,160,0.3);
+  color:rgba(130,230,170,0.8);
+}
+
+/* 장식물 속성 패널 */
+.deco-props{
+  display:none;padding:8px;
+  background:rgba(10,25,55,0.5);
+  border:1px solid rgba(100,180,255,0.08);border-top:none;
+  border-radius:0 0 6px 6px;
+}
+.deco-props.open{display:block}
+.prop-row{
+  display:flex;align-items:center;gap:6px;
+  margin-bottom:6px;
+}
+.prop-row:last-child{margin-bottom:0}
+.prop-label{
+  color:rgba(140,200,255,0.4);font-size:9px;
+  min-width:30px;flex-shrink:0;
+}
+.prop-slider{
+  flex:1;height:3px;cursor:pointer;
+  accent-color:rgba(100,220,160,0.8);
+}
+.prop-value{
+  color:rgba(180,220,255,0.6);font-size:9px;
+  min-width:28px;text-align:right;
+}
+
+/* 색상 스와치 */
+.color-swatch{
+  width:14px;height:14px;border-radius:3px;cursor:pointer;
+  border:1px solid transparent;padding:0;flex-shrink:0;
+}
+.color-swatch:hover{transform:scale(1.2)}
+.color-swatch.active{border-color:#fff;box-shadow:0 0 0 1px rgba(255,255,255,0.4)}
+.custom-color-picker{
+  width:14px;height:14px;border:none;padding:0;cursor:pointer;
+  border-radius:3px;background:none;flex-shrink:0;
+}
+
+/* 산호 종류 버튼 */
+.variant-btn{
+  flex:1;padding:3px 0;font-size:9px;cursor:pointer;
+  background:rgba(20,40,70,0.4);border:1px solid rgba(100,180,255,0.1);
+  border-radius:4px;color:rgba(180,220,255,0.5);
+}
+.variant-btn:hover{background:rgba(30,60,100,0.5)}
+.variant-btn.active{
+  background:rgba(60,180,120,0.15);border-color:rgba(100,220,160,0.3);
+  color:rgba(130,230,170,0.8);
+}
 
 #room-info{display:flex;align-items:center;gap:8px}
 #room-name{color:rgba(140,200,255,0.7);font-size:11px;letter-spacing:0.5px}

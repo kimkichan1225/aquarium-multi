@@ -60,6 +60,11 @@ router.get('/rooms/:nickname', async (req: Request, res: Response) => {
       variant: d.variant,
       color1: d.color1,
       color2: d.color2,
+      coralColor: d.coral_color,
+      baseSegments: d.base_segments,
+      baseSegLen: d.base_seg_len,
+      baseWidth: d.base_width,
+      baseSize: d.base_size,
     }));
 
     // 물고기 조회
@@ -272,9 +277,14 @@ router.put('/rooms/:nickname/decorations', async (req: Request, res: Response) =
       const savedDecorations = [];
       for (const deco of decorations) {
         const result = await client.query(
-          `INSERT INTO room_decorations (room_id, type, x, size, variant, color1, color2)
-           VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-          [roomId, deco.type, deco.x, deco.size || 1.0, deco.variant || 0, deco.color1 || null, deco.color2 || null]
+          `INSERT INTO room_decorations (room_id, type, x, size, variant, color1, color2, coral_color, base_segments, base_seg_len, base_width, base_size)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
+          [
+            roomId, deco.type, deco.x, deco.size || 1.0, deco.variant || 0,
+            deco.color1 || null, deco.color2 || null, deco.coralColor || null,
+            deco.baseSegments || null, deco.baseSegLen || null,
+            deco.baseWidth || null, deco.baseSize || null,
+          ]
         );
         const d = result.rows[0];
         savedDecorations.push({

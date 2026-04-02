@@ -12,6 +12,12 @@ interface TubeBranch {
   w: number;
 }
 
+interface CoralOpts {
+  type?: number;
+  size?: number;
+  color?: string;
+}
+
 export class Coral {
   x: number;
   y: number;
@@ -22,13 +28,13 @@ export class Coral {
   branches: Branch[];
   tubeBranches: TubeBranch[];
 
-  constructor(x: number) {
+  constructor(x: number, opts?: CoralOpts) {
     const { H } = store;
     this.x = x;
     this.y = H;
-    this.type = Math.floor(rand(0, 3));
-    this.size = rand(25, 55);
-    this.color = pick(['#FF6B6B', '#EE5A24', '#F8B500', '#6C5CE7', '#E056A0', '#00B894', '#FDA7DF']);
+    this.type = opts?.type ?? Math.floor(rand(0, 3));
+    this.size = opts?.size ?? rand(25, 55);
+    this.color = opts?.color ?? pick(['#FF6B6B', '#EE5A24', '#F8B500', '#6C5CE7', '#E056A0', '#00B894', '#FDA7DF']);
     this.z = rand(0.7, 1.2);
     this.branches = [];
     this.tubeBranches = [];
