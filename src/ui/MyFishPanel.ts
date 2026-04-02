@@ -1,7 +1,7 @@
 // ── 내 물고기 패널 ──
 
 import { TAU } from '@/utils/math';
-import { getMyUid } from '@/state/store';
+import { getMyUid, getMyName } from '@/state/store';
 import { fishes } from '@/engine/FishManager';
 import { emitRemoveFish } from '@/network/socket';
 
@@ -10,7 +10,9 @@ export function updateMyFishList(): void {
   const list = document.getElementById('my-fish-list');
   if (!list) return;
   const myUid = getMyUid();
-  const myFish = fishes.filter(f => f.ownerId === myUid && !f.temporary);
+  const myName = getMyName();
+  // ownerId 또는 ownerName으로 매칭 (닉네임 변경 등 대응)
+  const myFish = fishes.filter(f => (f.ownerId === myUid || f.ownerName === myUid || f.ownerName === myName) && !f.temporary);
   list.innerHTML = '';
   if (myFish.length === 0) {
     list.innerHTML = '<div style="color:rgba(140,200,255,0.3);font-size:11px;text-align:center;padding:20px">아직 물고기가 없습니다</div>';

@@ -78,9 +78,10 @@ function getFishesForRoom(roomName: string): Array<Fish & { rx?: number; ry?: nu
   return Array.from(fishes.values())
     .filter((f: Fish) => {
       if (roomName === 'lobby') {
-        return !f.roomId;
+        // 로비: roomId와 roomOwner 둘 다 없는 물고기만
+        return f.roomId == null && f.roomOwner == null;
       }
-      // room:닉네임 → 해당 닉네임이 주인인 물고기
+      // room:닉네임 → roomOwner 또는 roomId로 매칭
       const roomOwner = roomName.replace('room:', '');
       return f.roomOwner === roomOwner;
     })
