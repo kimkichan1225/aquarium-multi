@@ -4,6 +4,7 @@ import { io, Socket } from 'socket.io-client';
 import {
   getW, getH,
   getMyUid, getMyName,
+  getCurrentRoom,
 } from '@/state/store';
 import { Fish } from '@/entities/Fish';
 import { Food } from '@/entities/Food';
@@ -107,6 +108,8 @@ export function initSocket(): void {
   socket.on('connect', () => {
     document.getElementById('online-count')!.textContent = '1';
     socket.emit('register', getMyUid());
+    // 현재 방에 재입장 (초기 접속 또는 재연결 시)
+    socket.emit('joinRoom', getCurrentRoom());
   });
 
   socket.on('forceReload', () => {
