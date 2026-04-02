@@ -105,11 +105,16 @@ export function emitJoinRoom(roomName: string | null): void {
 export function initSocket(): void {
   socket = io();
 
+  let firstConnect = true;
   socket.on('connect', () => {
     document.getElementById('online-count')!.textContent = '1';
     socket.emit('register', getMyUid());
-    // 현재 방에 재입장 (초기 접속 또는 재연결 시)
-    socket.emit('joinRoom', getCurrentRoom());
+    // 첫 접속은 라우터(initRouter)가 joinRoom 처리
+    // 재연결 시에만 현재 방에 다시 입장
+    if (!firstConnect) {
+      socket.emit('joinRoom', getCurrentRoom());
+    }
+    firstConnect = false;
   });
 
   socket.on('forceReload', () => {
@@ -146,6 +151,8 @@ export function initSocket(): void {
   });
 
   socket.on('init', (fishList: any[]) => {
+    // 기존 물고기 전부 제거 후 새 목록으로 교체
+    clearAllFish();
     for (const data of fishList) {
       const fish = new Fish(data);
       fish.nameTimer = 3;
