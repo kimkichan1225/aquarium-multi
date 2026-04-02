@@ -89,19 +89,28 @@ function drawBackground(): void {
   ctx.fillStyle = getBgGradient(colors);
   ctx.fillRect(0, 0, W, H);
 
-  // 빛줄기
+  // 빛줄기 (갓레이)
   ctx.save();
-  const lightCount = nightMode ? 2 : 5;
-  const lightAlpha = 0.04 * nightMul;
-  const lightFill = th.light + lightAlpha + ')';
-  ctx.fillStyle = lightFill;
+  const lightCount = nightMode ? 3 : 6;
+  const baseAlpha = nightMode ? 0.055 : 0.11;
   for (let i = 0; i < lightCount; i++) {
-    const lx = W * 0.1 + i * (W * 0.2) + Math.sin(time * 0.3 + i) * 30;
-    const lw = 40 + Math.sin(time * 0.5 + i * 1.5) * 15;
+    const lx = W * 0.07 + i * (W / lightCount) + Math.sin(time * 0.22 + i * 1.3) * 45;
+    const topW = 12 + Math.sin(time * 0.38 + i * 2.0) * 7;
+    const botW = topW * 5.5;
+    // 위→아래 점점 투명해지는 그라데이션
+    const grad = ctx.createLinearGradient(lx, 0, lx, H);
+    grad.addColorStop(0,    th.light + baseAlpha + ')');
+    grad.addColorStop(0.45, th.light + (baseAlpha * 0.45) + ')');
+    grad.addColorStop(0.8,  th.light + (baseAlpha * 0.1) + ')');
+    grad.addColorStop(1,    th.light + '0)');
+    ctx.fillStyle = grad;
     ctx.beginPath();
-    ctx.moveTo(lx - lw, 0); ctx.lineTo(lx + lw, 0);
-    ctx.lineTo(lx + lw * 1.5, H * 0.7); ctx.lineTo(lx - lw * 1.5, H * 0.7);
-    ctx.closePath(); ctx.fill();
+    ctx.moveTo(lx - topW, 0);
+    ctx.lineTo(lx + topW, 0);
+    ctx.lineTo(lx + botW, H);
+    ctx.lineTo(lx - botW, H);
+    ctx.closePath();
+    ctx.fill();
   }
   ctx.restore();
 
