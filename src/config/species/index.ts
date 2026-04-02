@@ -17,6 +17,8 @@ import mantaray from './mantaray';
 import orca from './orca';
 import seaturtle from './seaturtle';
 import whaleshark from './whaleshark';
+import shark from './shark';
+import sunfish from './sunfish';
 
 export const SPECIES: SpeciesDef[] = [
   clownfish,     // 0
@@ -36,4 +38,6 @@ export const SPECIES: SpeciesDef[] = [
   orca,          // 14
   seaturtle,     // 15
   whaleshark,    // 16
+  shark,         // 17
+  sunfish,       // 18
 ];
