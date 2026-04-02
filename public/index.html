@@ -1284,6 +1284,18 @@ const SPECIES = [
       ctx.closePath(); ctx.fill(); ctx.stroke();
       ctx.restore();
 
+      // === 이쪽 뒷다리 (배 아래쪽에서 작게 뒤로 뻗음) ===
+      ctx.save(); ctx.translate(-sz*0.18, sz*0.12);
+      ctx.rotate(0.4 + flapAngle * 0.3);
+      ctx.fillStyle = p.body;
+      ctx.strokeStyle = outC; ctx.lineWidth = ol;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.bezierCurveTo(-sz*0.04, sz*0.03, -sz*0.14, sz*0.08, -sz*0.18, sz*0.05);
+      ctx.bezierCurveTo(-sz*0.15, sz*0.01, -sz*0.06, -sz*0.01, 0, 0);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.restore();
+
       // === 꼬리 (짧은 삼각) ===
       ctx.fillStyle = p.body;
       ctx.strokeStyle = outC; ctx.lineWidth = ol;
@@ -1293,21 +1305,21 @@ const SPECIES = [
       ctx.bezierCurveTo(-sz*0.42, sz*0.05, -sz*0.36, sz*0.06, -sz*0.3, sz*0.02);
       ctx.closePath(); ctx.fill(); ctx.stroke();
 
-      // === 이쪽 앞지느러미 (크고 길게 앞-아래로 뻗음, 노 모양) ===
-      ctx.save(); ctx.translate(sz*0.1, sz*0.1);
-      ctx.rotate(0.2 - flapAngle);
+      // === 이쪽 앞지느러미 (몸 안쪽에서 시작, 뒤-아래로 뻗음) ===
+      ctx.save(); ctx.translate(sz*0.05, sz*0.04);
+      ctx.rotate(0.3 - flapAngle);
       ctx.fillStyle = p.body;
       ctx.strokeStyle = outC; ctx.lineWidth = ol;
       ctx.beginPath();
-      ctx.moveTo(sz*0.02, 0);
-      ctx.bezierCurveTo(sz*0.12, sz*0.04, sz*0.28, sz*0.15, sz*0.35, sz*0.3);
-      ctx.bezierCurveTo(sz*0.35, sz*0.34, sz*0.28, sz*0.34, sz*0.2, sz*0.28);
-      ctx.bezierCurveTo(sz*0.1, sz*0.18, sz*0.02, sz*0.08, -sz*0.02, sz*0.02);
+      ctx.moveTo(0, 0);
+      ctx.bezierCurveTo(-sz*0.08, sz*0.06, -sz*0.22, sz*0.2, -sz*0.32, sz*0.32);
+      ctx.bezierCurveTo(-sz*0.34, sz*0.35, -sz*0.28, sz*0.34, -sz*0.2, sz*0.28);
+      ctx.bezierCurveTo(-sz*0.1, sz*0.18, -sz*0.02, sz*0.06, 0, 0);
       ctx.closePath(); ctx.fill(); ctx.stroke();
       // 밝은 반점
       ctx.fillStyle = p.belly + '99';
-      ctx.beginPath(); ctx.arc(sz*0.18, sz*0.15, sz*0.012, 0, TAU); ctx.fill();
-      ctx.beginPath(); ctx.arc(sz*0.24, sz*0.22, sz*0.01, 0, TAU); ctx.fill();
+      ctx.beginPath(); ctx.arc(-sz*0.14, sz*0.16, sz*0.012, 0, TAU); ctx.fill();
+      ctx.beginPath(); ctx.arc(-sz*0.22, sz*0.24, sz*0.01, 0, TAU); ctx.fill();
       ctx.restore();
 
       // === 몸통 (옆에서 본 타원형, 약간 납작) ===
