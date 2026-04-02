@@ -1802,11 +1802,11 @@ setInterval(() => {
 // ══════════════════════
 // ── 마우스 & 입력 ──
 // ══════════════════════
-// 커서 전송 쓰로틀 (50ms)
+// 커서 전송 쓰로틀 (100ms)
 let lastCursorSend = 0;
 function sendCursor(x, y) {
   const now = Date.now();
-  if(now - lastCursorSend > 50) {
+  if(now - lastCursorSend > 100) {
     socket.emit('cursor', { x: x/W, y: y/H, name: myName || '익명' });
     lastCursorSend = now;
   }
@@ -2004,7 +2004,7 @@ function animate(now) {
   for(const f of fishes){ f.update(dt); }
   // 죽은 임시 물고기 제거
   for(let i = fishes.length - 1; i >= 0; i--) {
-    if(fishes[i].dead && fishes[i].deathBubbles.length === 0) fishes.splice(i, 1);
+    if(fishes[i].dead && fishes[i].deathBubbles.length === 0) { fishById.delete(fishes[i].id); fishes.splice(i, 1); }
   }
   // z 기반 정렬
   fishes.sort((a,b) => a.z - b.z);
@@ -2223,24 +2223,33 @@ socket.on('init', (fishList) => {
     fish.nameTimer = 3;
     fish.showName = true;
     fishes.push(fish);
+    fishById.set(fish.id, fish);
   }
   updateMyFishList();
 });
 
 socket.on('fishAdded', (data) => {
   // 이미 있는지 확인
-  if(fishes.find(f => f.id === data.id)) return;
+  if(fishById.has(data.id)) return;
   const fish = new Fish(data);
   fish.nameTimer = 4;
   fish.showName = true;
   fishes.push(fish);
+  fishById.set(fish.id, fish);
   updateMyFishList();
 });
+
+// 물고기 ID → 인덱스 빠른 조회용 맵
+const fishById = new Map();
+function rebuildFishMap() {
+  fishById.clear();
+  for(let i = 0; i < fishes.length; i++) fishById.set(fishes[i].id, fishes[i]);
+}
 
 // 다른 클라이언트에서 보낸 물고기 위치 수신
 socket.on('fishPositions', (updates) => {
   for(const u of updates) {
-    const fish = fishes.find(f => f.id === u.id);
+    const fish = fishById.get(u.id);
     if(fish && fish.ownerId !== myUid) {
       fish.remoteX = u.x * W;
       fish.remoteY = u.y * H;
@@ -2250,7 +2259,7 @@ socket.on('fishPositions', (updates) => {
 });
 
 socket.on('fishRemoved', (fishId) => {
-  const fish = fishes.find(f => f.id === fishId);
+  const fish = fishById.get(fishId);
   if(!fish) return;
   if(fish.temporary && !fish.dying) {
     // 거품 사라짐 애니메이션 시작 (바로 제거하지 않음)
@@ -2268,7 +2277,7 @@ socket.on('fishRemoved', (fishId) => {
     }
   } else {
     const idx = fishes.indexOf(fish);
-    if(idx >= 0) fishes.splice(idx, 1);
+    if(idx >= 0) { fishById.delete(fish.id); fishes.splice(idx, 1); }
   }
   updateMyFishList();
 });
@@ -2544,12 +2553,24 @@ function updateMyFishList() {
   }
 }
 
-// 내 물고기 위치 주기적 전송 (150ms)
+// 내 물고기 위치 주기적 전송 (500ms, 변화 있을 때만)
+const lastSentPos = new Map();
 setInterval(() => {
   const myFish = fishes.filter(f => f.ownerId === myUid && !f.dying && !f.dead);
   if(myFish.length === 0) return;
-  socket.emit('fishPositions', myFish.map(f => ({ id: f.id, x: f.x/W, y: f.y/H, dir: f.dir })));
-}, 150);
+  const updates = [];
+  for(const f of myFish) {
+    const rx = Math.round(f.x/W * 1000) / 1000;
+    const ry = Math.round(f.y/H * 1000) / 1000;
+    const key = f.id;
+    const prev = lastSentPos.get(key);
+    if(!prev || Math.abs(prev.x - rx) > 0.002 || Math.abs(prev.y - ry) > 0.002 || prev.dir !== f.dir) {
+      updates.push({ id: f.id, x: rx, y: ry, dir: f.dir });
+      lastSentPos.set(key, { x: rx, y: ry, dir: f.dir });
+    }
+  }
+  if(updates.length > 0) socket.emit('fishPositions', updates);
+}, 500);
 
 // 토스트 알림
 function showToast(msg) {
