@@ -27,6 +27,8 @@ interface AddFishData {
   temporary?: boolean;
   lifespan?: number | null;
   loggedIn?: boolean;
+  roomId?: number | null;
+  roomOwner?: string | null;
 }
 
 // removeFish 이벤트 데이터 타입
@@ -78,9 +80,9 @@ function getFishesForRoom(roomName: string): Array<Fish & { rx?: number; ry?: nu
       if (roomName === 'lobby') {
         return !f.roomId;
       }
-      // room:닉네임 형태에서 닉네임 추출 후 해당 방의 물고기 반환
-      // roomId가 있는 물고기는 개인 방에 속한 것
-      return false; // 개인 방 물고기는 DB에서 직접 로드
+      // room:닉네임 → 해당 닉네임이 주인인 물고기
+      const roomOwner = roomName.replace('room:', '');
+      return f.roomOwner === roomOwner;
     })
     .map((f: Fish) => ({
       ...f,
@@ -134,6 +136,11 @@ function registerSocketHandlers(io: Server): void {
     // 물고기 추가
     socket.on('addFish', async (data: AddFishData) => {
       const uid: string = data.uid || socketUidMap.get(socket.id) || socket.id;
+      // 현재 소켓이 속한 방 확인
+      const currentRoom = getSocketRoom(socket.id);
+      const isInRoom = currentRoom !== 'lobby';
+      const roomOwnerName = isInRoom ? currentRoom.replace('room:', '') : null;
+
       const fish: Fish = {
         id: incrementAndGetFishId(),
         ownerId: uid,
@@ -146,17 +153,29 @@ function registerSocketHandlers(io: Server): void {
         x: data.x,
         y: data.y,
         dir: data.dir || 1,
+        roomId: data.roomId || null,
+        roomOwner: roomOwnerName,
         temporary: data.temporary || false,
         lifespan: data.lifespan || null,
         createdAt: Date.now(),
       };
 
+      // 방에서 만든 영구 물고기는 room_id 조회
+      let dbRoomId: number | null = null;
+      if (isInRoom && roomOwnerName) {
+        try {
+          const roomResult = await pool.query('SELECT id FROM rooms WHERE owner_nickname = $1', [roomOwnerName]);
+          if (roomResult.rows.length > 0) dbRoomId = roomResult.rows[0].id;
+        } catch { /* 무시 */ }
+      }
+      fish.roomId = dbRoomId;
+
       // 영구 물고기 (로그인 유저가 만든 비임시)는 DB 저장
       if (!fish.temporary && data.loggedIn) {
         try {
           const result = await pool.query(
-            `INSERT INTO fish (owner_nickname, name, species_idx, custom_colors, size, z, x, y, dir)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
+            `INSERT INTO fish (owner_nickname, name, species_idx, custom_colors, size, z, x, y, dir, room_id)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
             [
               data.ownerName,
               fish.name,
@@ -167,6 +186,7 @@ function registerSocketHandlers(io: Server): void {
               fish.x,
               fish.y,
               fish.dir,
+              dbRoomId,
             ]
           );
           fish.id = result.rows[0].id as number;

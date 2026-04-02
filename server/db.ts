@@ -108,6 +108,7 @@ export interface Fish {
   y: number;
   dir: number;
   roomId?: number | null;
+  roomOwner?: string | null;
   temporary: boolean;
   lifespan?: number | null;
   createdAt: number | Date;
@@ -121,7 +122,9 @@ async function loadFishFromDB(
   getNextFishId: () => number,
   setNextFishId: (id: number) => void
 ): Promise<void> {
-  const result: QueryResult<FishRow> = await pool.query('SELECT * FROM fish ORDER BY id');
+  const result: QueryResult<FishRow & { room_owner?: string }> = await pool.query(
+    `SELECT f.*, r.owner_nickname as room_owner FROM fish f LEFT JOIN rooms r ON f.room_id = r.id ORDER BY f.id`
+  );
   for (const row of result.rows) {
     const fish: Fish = {
       id: row.id,
@@ -137,6 +140,7 @@ async function loadFishFromDB(
       y: row.y,
       dir: row.dir,
       roomId: row.room_id,
+      roomOwner: row.room_owner || null,
       temporary: false,
       createdAt: row.created_at,
     };
