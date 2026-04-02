@@ -1043,98 +1043,85 @@ const SPECIES = [
     customDraw: true,
     defaultColors: {body:'#7A2E2B',fin:'#8B3A36',belly:'#E8C4BC',accent:'#5C1F1D'},
     draw(ctx, sz, p, tw, fw, t) {
-      const wingPulse = Math.sin(t * 1.5) * 0.06;
+      const wingPulse = Math.sin(t * 1.5) * 0.04;
 
-      // 긴 꼬리
-      ctx.save(); ctx.translate(-sz*0.45, 0);
-      const tailWv = Math.sin(t * 2) * sz * 0.06;
+      // 꼬리 (가늘고 길게 뒤로)
+      ctx.save(); ctx.translate(-sz*0.6, sz*0.02);
+      const tailWv = Math.sin(t * 2) * sz * 0.04;
       ctx.beginPath();
       ctx.moveTo(0, 0);
-      ctx.bezierCurveTo(-sz*0.25, tailWv*0.5, -sz*0.55, tailWv, -sz*0.85, tailWv*1.2);
+      ctx.bezierCurveTo(-sz*0.2, tailWv*0.5, -sz*0.45, tailWv, -sz*0.7, tailWv*1.2);
       ctx.strokeStyle = p.accent;
-      ctx.lineWidth = sz * 0.02;
+      ctx.lineWidth = sz * 0.018;
       ctx.lineCap = 'round';
       ctx.stroke();
       ctx.restore();
 
-      // 몸 전체 (하나의 넓은 다이아몬드/카이트 형태)
-      // 위쪽(등) - 어두운 색
+      // 등(위쪽) - 어두운 색, 부드러운 아치형으로 가로로 넓게
       ctx.fillStyle = p.body;
       ctx.beginPath();
-      // 머리 앞쪽 중앙
-      ctx.moveTo(sz*0.4, 0);
-      // 머리에서 위로 올라가며 날개 윗끝으로
-      ctx.bezierCurveTo(sz*0.35, -sz*0.1, sz*0.15, -sz*0.35, -sz*0.05, -sz*0.55);
-      // 날개 윗끝에서 뒤쪽 끝으로 (뒤로 길게 뻗음)
-      ctx.bezierCurveTo(-sz*0.15, -sz*0.6, -sz*0.3, -sz*0.5, -sz*0.45, -sz*0.3);
-      // 뒤쪽에서 꼬리 연결부로
-      ctx.bezierCurveTo(-sz*0.52, -sz*0.15, -sz*0.5, -sz*0.05, -sz*0.45, 0);
+      // 머리 앞쪽
+      ctx.moveTo(sz*0.45, -sz*0.02);
+      // 머리에서 등 라인을 따라 부드럽게 올라감
+      ctx.bezierCurveTo(sz*0.35, -sz*0.1, sz*0.1, -sz*0.22, -sz*0.15, -sz*0.28);
+      // 등 꼭대기에서 뒤로 길게 내려감
+      ctx.bezierCurveTo(-sz*0.3, -sz*0.3, -sz*0.5, -sz*0.22, -sz*0.65, -sz*0.08);
+      // 뒤쪽 꼬리 연결
+      ctx.bezierCurveTo(-sz*0.68, -sz*0.04, -sz*0.65, -sz*0.01, -sz*0.6, sz*0.02);
+      // 몸 중심선을 따라 앞으로
+      ctx.lineTo(sz*0.45, sz*0.02);
       ctx.closePath(); ctx.fill();
 
-      // 아래쪽(배) - 밝은 색
+      // 배(아래쪽) - 밝은 색, 크고 유연하게 흘러내림
       ctx.fillStyle = p.belly;
       ctx.beginPath();
-      ctx.moveTo(sz*0.4, 0);
-      // 머리에서 아래로 내려가며 날개 아랫끝으로
-      ctx.bezierCurveTo(sz*0.38, sz*0.08, sz*0.25, sz*0.25, sz*0.08, sz*0.38);
-      // 날개 아랫끝에서 뒤쪽으로
-      ctx.bezierCurveTo(-sz*0.05, sz*0.42, -sz*0.2, sz*0.35, -sz*0.32, sz*0.2);
-      // 뒤쪽에서 꼬리 연결부로
-      ctx.bezierCurveTo(-sz*0.4, sz*0.1, -sz*0.45, sz*0.03, -sz*0.45, 0);
+      ctx.moveTo(sz*0.45, sz*0.02);
+      // 머리 아래에서 배 쪽으로 부드럽게
+      ctx.bezierCurveTo(sz*0.4, sz*0.1, sz*0.2, sz*0.22, -sz*0.05, sz*0.32);
+      // 배 아래 가장 넓은 부분
+      ctx.bezierCurveTo(-sz*0.2, sz*0.38, -sz*0.4, sz*0.35, -sz*0.55, sz*0.22);
+      // 뒤쪽으로 좁아지며 꼬리 연결
+      ctx.bezierCurveTo(-sz*0.62, sz*0.12, -sz*0.63, sz*0.06, -sz*0.6, sz*0.02);
+      ctx.lineTo(sz*0.45, sz*0.02);
       ctx.closePath(); ctx.fill();
 
-      // 등-배 경계 그라데이션 (자연스럽게 섞이도록)
-      const midGrad = ctx.createLinearGradient(0, -sz*0.05, 0, sz*0.05);
-      midGrad.addColorStop(0, p.body + '88');
-      midGrad.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = midGrad;
-      ctx.beginPath();
-      ctx.moveTo(sz*0.4, -sz*0.02);
-      ctx.lineTo(-sz*0.45, -sz*0.02);
-      ctx.lineTo(-sz*0.45, sz*0.04);
-      ctx.lineTo(sz*0.4, sz*0.04);
-      ctx.closePath(); ctx.fill();
-
-      // 등 쪽 점무늬
-      ctx.fillStyle = p.belly;
+      // 점무늬 (등 쪽에만)
+      ctx.fillStyle = p.belly + 'CC';
       const dots = [
-        [0.25,-0.1],[0.15,-0.2],[0.05,-0.32],[-0.05,-0.42],[-0.15,-0.48],
-        [0.2,-0.15],[0.08,-0.25],[-0.02,-0.38],[-0.12,-0.45],[-0.25,-0.38],
-        [-0.3,-0.25],[-0.38,-0.15],[-0.35,-0.3],[-0.2,-0.2],[-0.08,-0.15],
-        [-0.42,-0.08],[0.3,-0.06],[-0.1,-0.35],[-0.28,-0.12],[0.1,-0.12],
-        [-0.18,-0.5],[-0.32,-0.4],[-0.45,-0.05],[0.22,-0.18],[-0.22,-0.3]
+        [0.3,-0.06],[0.2,-0.12],[0.08,-0.18],[-0.02,-0.22],[-0.15,-0.25],
+        [0.25,-0.1],[0.12,-0.16],[-0.08,-0.24],[-0.22,-0.26],[-0.35,-0.22],
+        [-0.42,-0.16],[-0.5,-0.1],[-0.55,-0.06],[-0.3,-0.15],[-0.18,-0.12],
+        [0.0,-0.14],[-0.45,-0.2],[-0.12,-0.2],[0.15,-0.08],[-0.28,-0.28],
+        [-0.38,-0.08],[-0.58,-0.04],[0.35,-0.04],[-0.05,-0.1],[-0.48,-0.14]
       ];
       for(const [dx,dy] of dots) {
         ctx.beginPath();
-        ctx.arc(sz*dx, sz*dy, sz*0.014 + Math.random()*sz*0.004, 0, TAU);
+        ctx.arc(sz*dx, sz*dy, sz*0.012 + Math.random()*sz*0.004, 0, TAU);
         ctx.fill();
       }
 
-      // 아가미 슬릿 (배 쪽에 작은 선들)
-      ctx.strokeStyle = p.accent + '66';
-      ctx.lineWidth = sz * 0.008;
+      // 아가미 슬릿 (배 쪽)
+      ctx.strokeStyle = p.accent + '55';
+      ctx.lineWidth = sz * 0.007;
       for(let i = 0; i < 3; i++) {
-        const gx = sz * (0.08 - i * 0.06);
+        const gx = sz * (0.05 - i * 0.06);
         ctx.beginPath();
-        ctx.moveTo(gx, sz*0.08);
-        ctx.lineTo(gx, sz*0.14);
+        ctx.moveTo(gx, sz*0.1);
+        ctx.lineTo(gx, sz*0.16);
         ctx.stroke();
       }
 
-      // 머리 뿔 (두갈래 세팔릭 핀, 위아래로)
+      // 머리 뿔 (위로 솟은 두 귀처럼, 귀여운 느낌)
       ctx.fillStyle = p.body;
-      // 위쪽 뿔
       ctx.beginPath();
-      ctx.moveTo(sz*0.38, -sz*0.04);
-      ctx.bezierCurveTo(sz*0.44, -sz*0.08, sz*0.5, -sz*0.12, sz*0.52, -sz*0.1);
-      ctx.bezierCurveTo(sz*0.5, -sz*0.06, sz*0.44, -sz*0.02, sz*0.38, -sz*0.02);
+      ctx.moveTo(sz*0.4, -sz*0.04);
+      ctx.bezierCurveTo(sz*0.44, -sz*0.1, sz*0.48, -sz*0.16, sz*0.5, -sz*0.14);
+      ctx.bezierCurveTo(sz*0.49, -sz*0.1, sz*0.45, -sz*0.04, sz*0.42, -sz*0.02);
       ctx.closePath(); ctx.fill();
-      // 아래쪽 뿔
-      ctx.fillStyle = p.belly;
       ctx.beginPath();
-      ctx.moveTo(sz*0.38, sz*0.04);
-      ctx.bezierCurveTo(sz*0.44, sz*0.08, sz*0.5, sz*0.12, sz*0.52, sz*0.1);
-      ctx.bezierCurveTo(sz*0.5, sz*0.06, sz*0.44, sz*0.02, sz*0.38, sz*0.02);
+      ctx.moveTo(sz*0.36, -sz*0.05);
+      ctx.bezierCurveTo(sz*0.38, -sz*0.12, sz*0.42, -sz*0.18, sz*0.44, -sz*0.16);
+      ctx.bezierCurveTo(sz*0.43, -sz*0.1, sz*0.4, -sz*0.05, sz*0.37, -sz*0.03);
       ctx.closePath(); ctx.fill();
 
       // 눈 (등 쪽에)
@@ -1435,7 +1422,7 @@ class Fish {
     this.fishName = data.name || '이름없음';
     this.x = (data.rx != null ? data.rx * W : null) ?? data.x ?? rand(100, W-100);
     this.y = (data.ry != null ? data.ry * H : null) ?? data.y ?? rand(120, H-200);
-    if(data.rx != null) { this.remoteX = data.rx * W; this.remoteY = data.ry * H; }
+    if(data.rx != null) { this.remoteX = data.rx * W; this.remoteY = data.ry * H; this.lastRemoteUpdate = Date.now(); }
     this.palette = data.customColors || this.species.defaultColors;
     const sr = this.species.sizeRange;
     this.size = (data.size != null) ? data.size : rand(sr[0], sr[1]);
@@ -1491,10 +1478,16 @@ class Fish {
     }
 
     // 다른 유저 소유 물고기는 수신 위치로 lerp (AI 비활성)
+    // 단, 3초 이상 업데이트 없으면 자체 AI로 전환
     if(this.ownerId !== myUid && this.remoteX != null) {
-      this.x = lerp(this.x, this.remoteX, 0.12 * s);
-      this.y = lerp(this.y, this.remoteY, 0.12 * s);
-      return;
+      if(this.lastRemoteUpdate && (Date.now() - this.lastRemoteUpdate > 3000)) {
+        this.remoteX = null;
+        this.remoteY = null;
+      } else {
+        this.x = lerp(this.x, this.remoteX, 0.12 * s);
+        this.y = lerp(this.y, this.remoteY, 0.12 * s);
+        return;
+      }
     }
 
     if(this.isJellyfish) {
@@ -2285,6 +2278,7 @@ socket.on('fishPositions', (updates) => {
       fish.remoteX = u.x * W;
       fish.remoteY = u.y * H;
       fish.dir = u.dir;
+      fish.lastRemoteUpdate = Date.now();
     }
   }
 });
