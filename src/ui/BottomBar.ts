@@ -153,8 +153,13 @@ export function initBottomBar(): void {
     navigateToRoom(name);
   });
 
-  // 로비로 돌아가기 버튼
+  // 로비로 돌아가기 버튼 (상단바)
   document.getElementById('btn-back-lobby')?.addEventListener('click', () => {
+    location.hash = '';
+  });
+
+  // 로비로 돌아가기 버튼 (하단바)
+  document.getElementById('btn-to-lobby')?.addEventListener('click', () => {
     location.hash = '';
   });
 }

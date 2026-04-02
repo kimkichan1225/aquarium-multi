@@ -71,6 +71,10 @@ async function enterRoom(nickname: string): Promise<void> {
   if (btnEditRoom) btnEditRoom.style.display = owner ? 'inline-block' : 'none';
   if (titleEl) titleEl.textContent = `${nickname}의 아쿠아리움`;
 
+  // 하단바 "로비로" 버튼 표시
+  const btnToLobby = document.getElementById('btn-to-lobby');
+  if (btnToLobby) btnToLobby.style.display = 'inline-block';
+
   // 방 정보 API 호출 (테마, 야간모드, 장식물)
   try {
     const roomData = await getRoom(nickname);
@@ -113,6 +117,10 @@ function enterLobby(): void {
 
   if (roomInfo) roomInfo.style.display = 'none';
   if (titleEl) titleEl.textContent = 'MULTI AQUARIUM';
+
+  // 하단바 "로비로" 버튼 숨김
+  const btnToLobby = document.getElementById('btn-to-lobby');
+  if (btnToLobby) btnToLobby.style.display = 'none';
 
   // 기본 환경 복원
   const ctx = getCtx();
