@@ -127,17 +127,9 @@ function registerSocketHandlers(io: Server): void {
       }
     });
 
-    // 기본적으로 lobby에 참가하고 물고기 목록 전송
+    // 기본적으로 lobby에 참가 (물고기 목록은 joinRoom에서 전송)
     socket.join('lobby');
     socketRoomMap.set(socket.id, 'lobby');
-
-    const fishList: Array<Fish & { rx?: number; ry?: number }> = Array.from(fishes.values())
-      .filter((f: Fish) => !f.roomId)
-      .map((f: Fish) => ({
-        ...f,
-        ...(f.rx != null ? { rx: f.rx, ry: f.ry } : {}),
-      }));
-    socket.emit('init', fishList);
 
     // 물고기 추가
     socket.on('addFish', async (data: AddFishData) => {
