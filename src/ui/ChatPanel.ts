@@ -296,12 +296,17 @@ async function enterPip(): Promise<void> {
       video.style.cursor = 'pointer';
       video.addEventListener('click', (e: MouseEvent) => {
         const rect = video.getBoundingClientRect();
-        const rx = e.clientX / rect.width;
-        const ry = e.clientY / rect.height;
-        const fx = rx * getW();
-        const fy = ry * getH();
-        foods.push(new Food(fx, fy));
-        emitFeed(fx, fy);
+        const cw = getW(), ch = getH();
+        // object-fit:cover 보정 — 비디오가 컨테이너를 덮도록 스케일된 상태
+        const scale = Math.max(rect.width / cw, rect.height / ch);
+        const offX = (rect.width - cw * scale) / 2;
+        const offY = (rect.height - ch * scale) / 2;
+        const fx = ((e.clientX - rect.left) - offX) / scale;
+        const fy = ((e.clientY - rect.top) - offY) / scale;
+        if (fx >= 0 && fx <= cw && fy >= 0 && fy <= ch) {
+          foods.push(new Food(fx, fy));
+          emitFeed(fx, fy);
+        }
       });
       doc.body.appendChild(video);
     }
