@@ -187,17 +187,28 @@ export class Fish {
           if (closest) this.chasingFood = closest;
         }
       }
-      const margin = 80;
-      if (this.x < margin) this.targetVx = Math.abs(this.targetVx);
-      if (this.x > W - margin) this.targetVx = -Math.abs(this.targetVx);
+      const margin = 120;
+      if (this.x < margin) {
+        const push = 0.4 + (margin - this.x) / margin * 0.8;
+        this.targetVx = Math.max(this.targetVx, push);
+      }
+      if (this.x > W - margin) {
+        const push = 0.4 + (this.x - (W - margin)) / margin * 0.8;
+        this.targetVx = Math.min(this.targetVx, -push);
+      }
       if (this.y < margin) {
-        const push = 0.3 + (margin - this.y) / margin * 0.5;
+        const push = 0.4 + (margin - this.y) / margin * 0.8;
         this.targetVy = Math.max(this.targetVy, push);
       }
       if (this.y > H - 140) {
-        const push = 0.3 + (this.y - (H - 140)) / 140 * 0.5;
+        const push = 0.4 + (this.y - (H - 140)) / 140 * 0.8;
         this.targetVy = Math.min(this.targetVy, -push);
       }
+      // 중심 회귀력 (가장자리에 머무르지 않도록)
+      const cx = W / 2, cy = H / 2;
+      const dxC = (cx - this.x) / W, dyC = (cy - this.y) / H;
+      this.targetVx += dxC * 0.15;
+      this.targetVy += dyC * 0.08;
 
       // 마우스 회피
       const curDist = dist(this.x, this.y, mx, my);
@@ -208,9 +219,10 @@ export class Fish {
         this.targetVy += Math.sin(angle) * flee * 0.3;
         this.tailSpeed = 8;
       } else { this.tailSpeed = lerp(this.tailSpeed, rand(3, 6), 0.02); }
-      const nearEdge = (this.y < margin || this.y > H - 140) ? 0.08 : 0.03;
-      this.vx = lerp(this.vx, this.targetVx, 0.03 * s);
-      this.vy = lerp(this.vy, this.targetVy, nearEdge * s);
+      const nearEdgeX = (this.x < margin || this.x > W - margin) ? 0.08 : 0.04;
+      const nearEdgeY = (this.y < margin || this.y > H - 140) ? 0.08 : 0.03;
+      this.vx = lerp(this.vx, this.targetVx, nearEdgeX * s);
+      this.vy = lerp(this.vy, this.targetVy, nearEdgeY * s);
       this.x += this.vx * s; this.y += this.vy * s;
       this.x = clamp(this.x, 20, W - 20); this.y = clamp(this.y, 20, H - 80);
       if (Math.abs(this.vx) > 0.05) this.dir = this.vx > 0 ? 1 : -1;
