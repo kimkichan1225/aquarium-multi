@@ -200,13 +200,13 @@ export class Fish {
       this.vy = lerp(this.vy, this.targetVy, 0.03 * s);
 
       // 경계 밀어내기: vx/vy에 직접 힘 추가
-      const edgeM = 100;
-      if (this.x < edgeM) this.vx += (edgeM - this.x) / edgeM * 0.15 * s;
-      if (this.x > W - edgeM) this.vx -= (this.x - (W - edgeM)) / edgeM * 0.15 * s;
-      if (this.y < edgeM) this.vy += (edgeM - this.y) / edgeM * 0.15 * s;
-      if (this.y > H - 140) this.vy -= (this.y - (H - 140)) / 140 * 0.15 * s;
+      const edgeM = 120;
+      if (this.x < edgeM) this.vx += (edgeM - this.x) / edgeM * 0.25 * s;
+      if (this.x > W - edgeM) this.vx -= (this.x - (W - edgeM)) / edgeM * 0.25 * s;
+      if (this.y < edgeM) this.vy += (edgeM - this.y) / edgeM * 0.25 * s;
+      if (this.y > H - 160) this.vy -= (this.y - (H - 160)) / 160 * 0.25 * s;
       this.x += this.vx * s; this.y += this.vy * s;
-      this.x = clamp(this.x, 20, W - 20); this.y = clamp(this.y, 20, H - 80);
+      this.x = clamp(this.x, 50, W - 50); this.y = clamp(this.y, 50, H - 120);
       if (Math.abs(this.vx) > 0.05) this.dir = this.vx > 0 ? 1 : -1;
     }
   }
