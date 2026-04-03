@@ -34,6 +34,7 @@ body{overflow:hidden;background:#020810;font-family:'Segoe UI',system-ui,sans-se
   opacity:0;transition:opacity 0.4s;
 }
 body:hover #bottom-bar{opacity:1}
+@media(hover:none){#bottom-bar{opacity:1}}
 #bottom-bar>*{pointer-events:auto}
 .btn{
   background:rgba(60,140,200,0.1);backdrop-filter:blur(6px);
@@ -654,4 +655,96 @@ body:hover #bottom-bar{opacity:1}
 @media(max-width:560px){
   .de-content{flex-direction:column}
   .de-right{width:100%;flex-direction:row;flex-wrap:wrap;justify-content:center}
+}
+
+/* ── 모바일 반응형 (가로형 기준) ── */
+
+/* 모바일 공통 */
+@media (max-height:500px),(max-width:768px){
+  /* 상단바 */
+  #top-bar{height:32px;padding:0 8px;opacity:1}
+  #top-bar h1{font-size:11px;letter-spacing:1px}
+  #top-bar .info{font-size:9px}
+  #room-info{gap:4px !important}
+  #room-info .btn{font-size:8px !important;padding:2px 6px !important}
+  #user-info{font-size:9px}
+  #btn-logout{font-size:9px;padding:2px 6px}
+
+  /* 하단바 — 가로 스크롤 */
+  #bottom-bar{
+    height:36px;gap:4px;padding:0 6px;
+    justify-content:flex-start;
+    overflow-x:auto;overflow-y:hidden;
+    -webkit-overflow-scrolling:touch;
+    opacity:1;
+  }
+  #bottom-bar::-webkit-scrollbar{display:none}
+  .btn{font-size:10px;padding:5px 10px;flex-shrink:0}
+
+  /* 채팅 모달 */
+  #chat-panel{
+    width:240px;height:280px;left:8px;bottom:44px;
+    min-width:180px;min-height:160px;
+  }
+  #chat-header{padding:6px 10px;font-size:10px}
+  #chat-input{font-size:10px;padding:5px 8px}
+  #chat-send{font-size:10px;padding:5px 8px}
+  #chat-floating-btn{width:36px;height:36px;left:8px;bottom:40px}
+  #chat-floating-btn svg{width:16px;height:16px}
+
+  /* 물고기 만들기 패널 */
+  #creator{padding:16px;width:320px;max-width:90vw}
+  #creator h2{font-size:13px;margin-bottom:12px}
+  .form-group{margin-bottom:10px}
+  .form-group label{font-size:10px}
+  .form-group input[type="text"]{font-size:11px;padding:6px 8px}
+  .species-grid{gap:4px !important}
+  .species-card{padding:4px 6px !important}
+  .species-card canvas{width:48px !important;height:36px !important}
+  .species-card .name{font-size:8px !important}
+  #preview-side{min-width:auto;padding:12px}
+  #preview-canvas{width:160px;height:120px}
+
+  /* 물고기 정보 패널 */
+  #fish-info-panel{width:200px;padding:10px}
+  .fip-name{font-size:11px}
+  .fip-mood{font-size:11px}
+  .fip-row{font-size:10px}
+  .fip-pet-btn{padding:6px;font-size:11px}
+
+  /* 그리기 에디터 */
+  .draw-editor{max-width:95vw}
+  .de-header h2{font-size:13px}
+  .de-content{padding:10px 12px;gap:10px}
+  .de-part-btn{font-size:9px;padding:3px 7px}
+  .de-tool-btn{font-size:10px;padding:3px 6px}
+  .de-swatch{width:18px;height:18px}
+  .de-right{width:140px}
+  #de-preview{width:130px;height:auto}
+
+  /* 도감·일기 패널 */
+  #room-log-panel{width:280px;max-height:70vh}
+
+  /* 토스트 */
+  .toast{font-size:10px !important;padding:6px 12px !important}
+}
+
+/* 세로형 모바일 (portrait) — 더 작은 화면 */
+@media (max-width:480px) and (orientation:portrait){
+  #top-bar h1{font-size:10px}
+  #bottom-bar{height:32px}
+  .btn{font-size:9px;padding:4px 8px}
+  #chat-panel{width:200px;height:240px}
+  #creator{width:280px;padding:12px}
+  #creator h2{font-size:12px}
+  .de-content{flex-direction:column}
+  .de-right{width:100%;flex-direction:row;flex-wrap:wrap;justify-content:center}
+  #fish-info-panel{width:180px}
+  #room-log-panel{width:260px}
+}
+
+/* 가로형 모바일에서 세로 스크롤 방지 */
+@media (max-height:400px){
+  #creator{max-height:85vh;overflow-y:auto}
+  .draw-editor{max-height:90vh;overflow-y:auto}
 }
