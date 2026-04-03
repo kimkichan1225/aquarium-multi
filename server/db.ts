@@ -55,6 +55,8 @@ async function initDB(): Promise<void> {
   `);
   await pool.query(`ALTER TABLE fish ADD COLUMN IF NOT EXISTS room_id INT REFERENCES rooms(id)`);
   await pool.query(`ALTER TABLE room_decorations ADD COLUMN IF NOT EXISTS coral_color VARCHAR(20)`);
+  // 커스텀 물고기 파트 데이터
+  await pool.query(`ALTER TABLE fish ADD COLUMN IF NOT EXISTS custom_parts JSONB`);
   await pool.query(`ALTER TABLE room_decorations ADD COLUMN IF NOT EXISTS base_segments INT`);
   await pool.query(`ALTER TABLE room_decorations ADD COLUMN IF NOT EXISTS base_seg_len FLOAT`);
   await pool.query(`ALTER TABLE room_decorations ADD COLUMN IF NOT EXISTS base_width FLOAT`);
@@ -103,6 +105,7 @@ export interface FishRow {
   name: string;
   species_idx: number;
   custom_colors: Record<string, string> | null;
+  custom_parts: Record<string, string> | null;
   size: number;
   z: number;
   x: number;
@@ -121,6 +124,7 @@ export interface Fish {
   name: string;
   speciesIdx: number;
   customColors: Record<string, string> | null;
+  customParts?: Record<string, string> | null;
   size: number;
   z: number;
   x: number;
@@ -153,6 +157,7 @@ async function loadFishFromDB(
       name: row.name,
       speciesIdx: row.species_idx,
       customColors: row.custom_colors,
+      customParts: row.custom_parts || null,
       size: row.size,
       z: row.z,
       x: row.x,

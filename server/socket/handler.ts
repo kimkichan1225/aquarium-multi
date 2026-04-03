@@ -29,6 +29,7 @@ interface AddFishData {
   loggedIn?: boolean;
   roomId?: number | null;
   roomOwner?: string | null;
+  customParts?: Record<string, string> | null;
 }
 
 // removeFish 이벤트 데이터 타입
@@ -149,6 +150,7 @@ function registerSocketHandlers(io: Server): void {
         name: data.name || '이름없는 물고기',
         speciesIdx: data.speciesIdx,
         customColors: data.customColors || null,
+        customParts: data.customParts || null,
         size: data.size,
         z: data.z,
         x: data.x,
@@ -175,13 +177,14 @@ function registerSocketHandlers(io: Server): void {
       if (!fish.temporary && data.loggedIn) {
         try {
           const result = await pool.query(
-            `INSERT INTO fish (owner_nickname, name, species_idx, custom_colors, size, z, x, y, dir, room_id)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
+            `INSERT INTO fish (owner_nickname, name, species_idx, custom_colors, custom_parts, size, z, x, y, dir, room_id)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`,
             [
               data.ownerName,
               fish.name,
               fish.speciesIdx,
               JSON.stringify(fish.customColors),
+              fish.customParts ? JSON.stringify(fish.customParts) : null,
               fish.size,
               fish.z,
               fish.x,

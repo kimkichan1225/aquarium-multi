@@ -44,6 +44,7 @@ export interface FishData {
   temporary?: boolean;
   lifespan?: number;
   dbId?: number;
+  customParts?: Record<string, string> | null;
   rx?: number;
   ry?: number;
   createdAt?: number;

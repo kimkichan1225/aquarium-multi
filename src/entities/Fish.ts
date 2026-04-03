@@ -5,6 +5,7 @@ import type { FishColors, SpeciesDef, FishData } from '@/types';
 import type { Food } from './Food';
 import type { Item } from './Item';
 import { recordFeed, recordItemCollected } from '@/engine/RoomLog';
+import { createCustomDraw } from '@/ui/DrawEditor';
 
 export type Mood = 'happy' | 'neutral' | 'hungry' | 'sad';
 
@@ -101,7 +102,23 @@ export class Fish {
 
   constructor(data: FishData) {
     const { W, H } = store;
-    const si = data.speciesIdx !== undefined ? data.speciesIdx : Math.floor(rand(0, SPECIES.length));
+    let si = data.speciesIdx !== undefined ? data.speciesIdx : Math.floor(rand(0, SPECIES.length));
+
+    // 커스텀 파트가 있으면 동적으로 species 복원
+    if (data.customParts && si >= SPECIES.length) {
+      const custom = createCustomDraw(data.customParts as Record<any, string>);
+      si = SPECIES.length;
+      SPECIES.push({
+        name: data.name || '커스텀',
+        bodyW: 0.5, bodyH: 0.35, sizeRange: [25, 45],
+        customDraw: true,
+        defaultColors: { body: '#88BBFF', fin: '#6699DD', belly: '#AADDFF', accent: '#FFFFFF' },
+        draw: custom.draw,
+      });
+    }
+    // 유효하지 않은 인덱스 보정
+    if (si >= SPECIES.length) si = 0;
+
     this.species = SPECIES[si];
     this.speciesIdx = si;
     this.isJellyfish = this.species.isJellyfish || false;
