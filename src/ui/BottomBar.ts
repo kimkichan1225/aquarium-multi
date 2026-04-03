@@ -19,7 +19,9 @@ import { toggleChat } from './ChatPanel';
 import { navigateToRoom } from '@/engine/router';
 import { showToast } from './Toast';
 import { openFishInfo, closeFishInfo } from './FishInfoPanel';
-import { getCurrentRoom } from '@/state/store';
+import { getCurrentRoom, setMyName } from '@/state/store';
+import { openDrawEditor, getDrawFishName, createCustomDraw } from './DrawEditor';
+import type { PartName } from './DrawEditor';
 
 /** 먹이 주기 */
 function dropFood(x: number, y: number): void {
@@ -141,6 +143,44 @@ export function initBottomBar(): void {
       invalidateBgCache();
     }
     if (key === 'c') toggleChat();
+  });
+
+  // 직접 그리기 버튼
+  document.getElementById('btn-draw-fish')!.addEventListener('click', () => {
+    openDrawEditor((partDataURLs: Record<PartName, string>) => {
+      const W = getW(), H = getH();
+      const fishName = getDrawFishName();
+      const ownerName = getMyName() || getLoggedNickname() || '익명';
+      setMyName(ownerName);
+
+      // 커스텀 draw 함수 생성 후 SPECIES에 동적 추가
+      const custom = createCustomDraw(partDataURLs);
+      const customIdx = SPECIES.length;
+      SPECIES.push({
+        name: fishName,
+        bodyW: 0.5, bodyH: 0.35, sizeRange: [25, 45],
+        customDraw: true,
+        defaultColors: { body: '#88BBFF', fin: '#6699DD', belly: '#AADDFF', accent: '#FFFFFF' },
+        draw: custom.draw,
+      });
+
+      emitAddFish({
+        uid: getMyUid(),
+        ownerName,
+        name: fishName,
+        speciesIdx: customIdx,
+        customColors: { body: '#88BBFF', fin: '#6699DD', belly: '#AADDFF', accent: '#FFFFFF' },
+        size: 35,
+        z: 1.0,
+        x: rand(100, W - 100),
+        y: rand(120, H - 200),
+        dir: Math.random() > 0.5 ? 1 : -1,
+        loggedIn: isLoggedIn(),
+        customParts: partDataURLs, // 서버에 전송해서 다른 유저에게도 전달
+      });
+
+      showToast(`"${fishName}" 을(를) 직접 그려서 수조에 넣었습니다! 🎨`);
+    });
   });
 
   // 버튼 이벤트
