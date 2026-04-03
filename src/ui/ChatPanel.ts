@@ -4,6 +4,7 @@ import { getMyName } from '@/state/store';
 import { emitChat, emitDeleteChat } from '@/network/socket';
 
 let chatPanel: HTMLElement;
+let chatHeader: HTMLElement;
 let chatMessages: HTMLElement;
 let chatInput: HTMLInputElement;
 let chatFloatingBtn: HTMLElement;
@@ -172,9 +173,55 @@ function sendChat(): void {
   chatInput.value = '';
 }
 
+/** 드래그 이동 초기화 */
+function initDrag(): void {
+  let isDragging = false;
+  let startX = 0, startY = 0;
+  let panelX = 0, panelY = 0;
+
+  chatHeader.addEventListener('mousedown', (e: MouseEvent) => {
+    if ((e.target as HTMLElement).closest('.panel-close')) return;
+    isDragging = true;
+    startX = e.clientX - panelX;
+    startY = e.clientY - panelY;
+    e.preventDefault();
+  });
+
+  chatHeader.addEventListener('touchstart', (e: TouchEvent) => {
+    if ((e.target as HTMLElement).closest('.panel-close')) return;
+    isDragging = true;
+    const touch = e.touches[0];
+    startX = touch.clientX - panelX;
+    startY = touch.clientY - panelY;
+  }, { passive: true });
+
+  const onMove = (cx: number, cy: number) => {
+    if (!isDragging) return;
+    panelX = cx - startX;
+    panelY = cy - startY;
+    // 화면 밖으로 나가지 않도록 제한
+    const rect = chatPanel.getBoundingClientRect();
+    const maxX = window.innerWidth - rect.width;
+    const maxY = window.innerHeight - rect.height;
+    panelX = Math.max(-chatPanel.offsetLeft, Math.min(panelX, maxX - chatPanel.offsetLeft));
+    panelY = Math.max(-chatPanel.offsetTop, Math.min(panelY, maxY - chatPanel.offsetTop));
+    chatPanel.style.transform = `translate(${panelX}px, ${panelY}px)`;
+  };
+
+  document.addEventListener('mousemove', (e) => onMove(e.clientX, e.clientY));
+  document.addEventListener('touchmove', (e) => {
+    if (isDragging) onMove(e.touches[0].clientX, e.touches[0].clientY);
+  }, { passive: true });
+
+  const onEnd = () => { isDragging = false; };
+  document.addEventListener('mouseup', onEnd);
+  document.addEventListener('touchend', onEnd);
+}
+
 /** 채팅 패널 초기화 */
 export function initChatPanel(): void {
   chatPanel = document.getElementById('chat-panel')!;
+  chatHeader = document.getElementById('chat-header')!;
   chatMessages = document.getElementById('chat-messages')!;
   chatInput = document.getElementById('chat-input') as HTMLInputElement;
   chatFloatingBtn = document.getElementById('chat-floating-btn')!;
@@ -191,4 +238,6 @@ export function initChatPanel(): void {
   chatInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') sendChat();
   });
+
+  initDrag();
 }
