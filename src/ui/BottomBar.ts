@@ -8,6 +8,7 @@ import {
   getCurrentTheme, setCurrentTheme,
   getMyUid, getMyName,
   getEditMode, getLoggedNickname, isLoggedIn,
+  getIsRoomOwner,
 } from '@/state/store';
 import { THEMES } from '@/config/themes';
 import { SPECIES } from '@/config/species';
@@ -147,6 +148,11 @@ export function initBottomBar(): void {
 
   // 직접 그리기 버튼
   document.getElementById('btn-draw-fish')!.addEventListener('click', () => {
+    // 다른 사람 방에서는 생성 불가
+    if (getCurrentRoom() && !getIsRoomOwner()) {
+      showToast('다른 사람의 방에서는 물고기를 만들 수 없습니다');
+      return;
+    }
     openDrawEditor((partDataURLs: Record<PartName, string>) => {
       const W = getW(), H = getH();
       const fishName = getDrawFishName();

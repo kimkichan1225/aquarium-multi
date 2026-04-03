@@ -5,6 +5,7 @@ import {
   getW, getH, getTime,
   getMyUid, getMyName, setMyName,
   isLoggedIn, getLoggedNickname,
+  getCurrentRoom, getIsRoomOwner,
 } from '@/state/store';
 import { SPECIES } from '@/config/species';
 import { emitAddFish } from '@/network/socket';
@@ -131,6 +132,11 @@ export function initCreatorPanel(): void {
 
   // 열기
   document.getElementById('btn-create')!.addEventListener('click', () => {
+    // 다른 사람 방에서는 생성 불가
+    if (getCurrentRoom() && !getIsRoomOwner()) {
+      showToast('다른 사람의 방에서는 물고기를 만들 수 없습니다');
+      return;
+    }
     creatorOverlay.classList.add('open');
     const ownerInput = document.getElementById('input-owner') as HTMLInputElement;
     if (isLoggedIn()) {
