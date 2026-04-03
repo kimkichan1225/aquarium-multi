@@ -1,7 +1,9 @@
 // ── 채팅 패널 ──
 
-import { getMyName } from '@/state/store';
-import { emitChat, emitDeleteChat } from '@/network/socket';
+import { getMyName, getW, getH } from '@/state/store';
+import { emitChat, emitDeleteChat, emitFeed } from '@/network/socket';
+import { Food } from '@/entities/Food';
+import { foods } from '@/engine/Renderer';
 
 let chatPanel: HTMLElement;
 let chatHeader: HTMLElement;
@@ -189,13 +191,15 @@ function getPipStyles(): string {
     }
     #pip-bg-video{
       position:fixed;top:0;left:0;width:100%;height:100%;
-      object-fit:cover;z-index:0;pointer-events:none;
+      object-fit:cover;z-index:0;
     }
     #pip-overlay{
       position:relative;z-index:1;display:flex;flex-direction:column;
       height:100vh;overflow:hidden;
       background:rgba(5,15,35,0.55);
+      pointer-events:none;
     }
+    #pip-overlay>*{pointer-events:auto;}
     #pip-header{
       color:rgba(140,200,255,0.7);font-size:12px;letter-spacing:1px;font-weight:600;
       padding:10px 12px;display:flex;justify-content:space-between;align-items:center;
@@ -287,6 +291,18 @@ async function enterPip(): Promise<void> {
       video.srcObject = stream;
       video.autoplay = true;
       video.muted = true;
+      // 배경 클릭 → 먹이 주기
+      video.style.pointerEvents = 'auto';
+      video.style.cursor = 'pointer';
+      video.addEventListener('click', (e: MouseEvent) => {
+        const rect = video.getBoundingClientRect();
+        const rx = e.clientX / rect.width;
+        const ry = e.clientY / rect.height;
+        const fx = rx * getW();
+        const fy = ry * getH();
+        foods.push(new Food(fx, fy));
+        emitFeed(fx, fy);
+      });
       doc.body.appendChild(video);
     }
 

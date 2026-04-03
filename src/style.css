@@ -542,3 +542,55 @@ body:hover #bottom-bar{opacity:1}
 }
 .fip-pet-btn:hover:not(:disabled){background:rgba(60,180,120,0.4)}
 .fip-pet-btn:disabled{opacity:0.4;cursor:not-allowed}
+
+/* 도감·일기 패널 */
+#room-log-panel{
+  position:fixed;left:50%;top:50%;transform:translate(-50%,-50%) scale(0.95);
+  width:320px;max-height:480px;
+  background:rgba(5,15,35,0.92);backdrop-filter:blur(16px);
+  border:1px solid rgba(100,180,255,0.18);border-radius:16px;
+  z-index:310;display:none;flex-direction:column;
+  box-shadow:0 12px 40px rgba(0,0,0,0.6);
+  opacity:0;transition:opacity 0.2s,transform 0.2s;
+}
+#room-log-panel.open{display:flex;opacity:1;transform:translate(-50%,-50%) scale(1)}
+.rlog-header{display:flex;align-items:center;padding:12px 14px 0;gap:8px;flex-shrink:0}
+.rlog-tabs{display:flex;gap:6px;flex:1}
+.rlog-tab{
+  background:rgba(255,255,255,0.05);border:1px solid rgba(100,180,255,0.1);
+  border-radius:8px;color:rgba(140,200,255,0.5);font-size:11px;
+  padding:5px 12px;cursor:pointer;transition:all 0.2s;
+}
+.rlog-tab.active{background:rgba(60,120,200,0.3);border-color:rgba(100,180,255,0.3);color:rgba(180,220,255,0.9)}
+.rlog-tab:hover:not(.active){background:rgba(255,255,255,0.08)}
+.rlog-close{background:none;border:none;color:rgba(140,200,255,0.4);font-size:18px;cursor:pointer;padding:0 4px;border-radius:4px}
+.rlog-close:hover{color:#fff;background:rgba(255,255,255,0.1)}
+.rlog-body{flex:1;overflow-y:auto;padding:12px 14px 14px}
+.rlog-body::-webkit-scrollbar{width:4px}
+.rlog-body::-webkit-scrollbar-thumb{background:rgba(100,180,255,0.15);border-radius:2px}
+.rlog-empty{color:rgba(140,200,255,0.4);font-size:12px;text-align:center;padding:30px 0;line-height:1.8}
+.rlog-section-title{color:rgba(140,200,255,0.5);font-size:10px;letter-spacing:1px;margin:10px 0 6px;font-weight:600}
+.rlog-item-grid{display:flex;flex-direction:column;gap:6px}
+.rlog-item-card{
+  display:flex;align-items:center;gap:10px;padding:8px 10px;
+  background:rgba(255,255,255,0.04);border:1px solid rgba(100,180,255,0.08);border-radius:10px;
+}
+.rlog-item-icon{font-size:22px;flex-shrink:0}
+.rlog-item-info{flex:1}
+.rlog-item-name{color:rgba(200,220,240,0.85);font-size:12px;font-weight:600}
+.rlog-item-count{color:rgba(140,200,255,0.7);font-size:11px}
+.rlog-item-fish{color:rgba(140,200,255,0.4);font-size:10px;margin-top:2px}
+.rlog-recent{display:flex;flex-direction:column;gap:4px}
+.rlog-recent-row{
+  display:flex;align-items:center;gap:8px;font-size:11px;
+  color:rgba(200,220,240,0.7);padding:3px 0;
+}
+.rlog-time{color:rgba(140,200,255,0.35);font-size:10px;margin-left:auto}
+.rlog-diary-entry{
+  padding:10px;margin-bottom:8px;
+  background:rgba(255,255,255,0.03);border:1px solid rgba(100,180,255,0.08);border-radius:10px;
+}
+.rlog-diary-date{color:rgba(180,220,255,0.8);font-size:12px;font-weight:700;margin-bottom:4px}
+.rlog-diary-note{color:rgba(200,220,240,0.6);font-size:11px;margin-bottom:6px}
+.rlog-diary-row{display:flex;gap:8px;font-size:11px;color:rgba(200,220,240,0.7);padding:1px 0}
+.rlog-diary-label{color:rgba(140,200,255,0.45);width:32px;flex-shrink:0}

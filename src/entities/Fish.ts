@@ -4,6 +4,7 @@ import { SPECIES } from '@/config/species';
 import type { FishColors, SpeciesDef, FishData } from '@/types';
 import type { Food } from './Food';
 import type { Item } from './Item';
+import { recordFeed, recordItemCollected } from '@/engine/RoomLog';
 
 export type Mood = 'happy' | 'neutral' | 'hungry' | 'sad';
 
@@ -177,6 +178,7 @@ export class Fish {
     this.lastFed = Date.now();
     this.moodIconTimer = 2.5;
     this.mouthOpen = 0.3;
+    if (this.dbId) recordFeed();
     setTimeout(() => this.mouthOpen = 0, 300);
     if (this.dbId) saveFishState(this.dbId, { hunger: this.hunger, affinity: this.affinity, lastFed: this.lastFed, lastSeen: Date.now() });
   }
@@ -192,9 +194,10 @@ export class Fish {
   }
 
   /** 아이템 수집 시 호출 */
-  onCollectItem(): void {
+  onCollectItem(itemType?: string): void {
     this.affinity = Math.min(100, this.affinity + 2);
     this.moodIconTimer = 2;
+    if (this.dbId && itemType) recordItemCollected(itemType as any, this.fishName);
   }
 
   update(dt: number, foods: Food[], items?: Item[]): void {
@@ -299,7 +302,7 @@ export class Fish {
           it.collected = true;
           it.collectedBy = this.fishName;
           this.chasingItem = null;
-          this.onCollectItem();
+          this.onCollectItem(it.type);
         } else {
           this.targetVx = (dx / d) * effectiveSpeed * 1.5;
           this.targetVy = (dy / d) * effectiveSpeed * 1.5;

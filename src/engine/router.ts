@@ -13,6 +13,7 @@ import { getCtx } from './Renderer';
 import { invalidateBgCache } from './Renderer';
 import { showToast } from '@/ui/Toast';
 import { closeEditor, setEditorDecorations } from '@/ui/RoomEditor';
+import { loadRoomLog, clearRoomLog } from './RoomLog';
 import { Seaweed } from '@/entities/Seaweed';
 import { Coral } from '@/entities/Coral';
 import { getW, getH } from '@/state/store';
@@ -28,6 +29,11 @@ export function initRouter(): void {
     if (!nick || !getIsRoomOwner()) return;
     emitSendInvite(nick);
     showToast('초대장을 로비 채팅에 보냈습니다 🐠');
+  });
+
+  // 도감·일기 버튼
+  document.getElementById('btn-room-log')?.addEventListener('click', () => {
+    import('@/ui/RoomLogPanel').then(m => m.toggleRoomLog());
   });
 }
 
@@ -75,6 +81,9 @@ async function enterRoom(nickname: string): Promise<void> {
     } catch { /* 무시 */ }
   }
 
+  // 방 기록 로드
+  loadRoomLog(nickname);
+
   // 소켓으로 방 참가
   emitJoinRoom(nickname);
 
@@ -93,6 +102,8 @@ async function enterRoom(nickname: string): Promise<void> {
   if (btnEditRoom) btnEditRoom.style.display = owner ? 'inline-block' : 'none';
   const btnInvite = document.getElementById('btn-invite');
   if (btnInvite) btnInvite.style.display = owner ? 'inline-block' : 'none';
+  const btnRoomLog = document.getElementById('btn-room-log');
+  if (btnRoomLog) btnRoomLog.style.display = 'inline-block';
   if (titleEl) titleEl.textContent = `${nickname}의 아쿠아리움`;
   document.getElementById('top-bar')?.classList.add('in-room');
 
@@ -133,6 +144,9 @@ function enterLobby(): void {
   // 에디터 닫기
   closeEditor();
 
+  // 방 기록 초기화
+  clearRoomLog();
+
   // 소켓으로 로비 참가
   emitJoinRoom(null);
 
@@ -143,6 +157,9 @@ function enterLobby(): void {
   if (roomInfo) roomInfo.style.display = 'none';
   const btnInviteEl = document.getElementById('btn-invite');
   if (btnInviteEl) btnInviteEl.style.display = 'none';
+  const btnRoomLogEl = document.getElementById('btn-room-log');
+  if (btnRoomLogEl) btnRoomLogEl.style.display = 'none';
+  import('@/ui/RoomLogPanel').then(m => m.closeRoomLog());
   if (titleEl) titleEl.textContent = 'MULTI AQUARIUM';
   document.getElementById('top-bar')?.classList.remove('in-room');
 
