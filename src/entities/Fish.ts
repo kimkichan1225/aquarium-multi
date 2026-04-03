@@ -187,22 +187,27 @@ export class Fish {
           if (closest) this.chasingFood = closest;
         }
       }
-      const margin = 100;
-      if (this.x < margin) {
-        const push = 0.3 + (margin - this.x) / margin * 0.5;
-        this.targetVx = Math.max(this.targetVx, push);
+      // 경계 회피: wanderAngle을 안쪽으로 꺾어서 자연스러운 방향 전환
+      const marginX = 100, marginY = 100, marginBottom = 140;
+      let steer = false;
+      if (this.x < marginX) {
+        this.wanderAngle = lerp(this.wanderAngle, 0, 0.1); // 오른쪽으로
+        steer = true;
+      } else if (this.x > W - marginX) {
+        this.wanderAngle = lerp(this.wanderAngle, Math.PI, 0.1); // 왼쪽으로
+        steer = true;
       }
-      if (this.x > W - margin) {
-        const push = 0.3 + (this.x - (W - margin)) / margin * 0.5;
-        this.targetVx = Math.min(this.targetVx, -push);
+      if (this.y < marginY) {
+        this.wanderAngle = lerp(this.wanderAngle, Math.PI * 0.3, 0.1); // 아래쪽으로
+        steer = true;
+      } else if (this.y > H - marginBottom) {
+        this.wanderAngle = lerp(this.wanderAngle, -Math.PI * 0.3, 0.1); // 위쪽으로
+        steer = true;
       }
-      if (this.y < margin) {
-        const push = 0.3 + (margin - this.y) / margin * 0.5;
-        this.targetVy = Math.max(this.targetVy, push);
-      }
-      if (this.y > H - 140) {
-        const push = 0.3 + (this.y - (H - 140)) / 140 * 0.5;
-        this.targetVy = Math.min(this.targetVy, -push);
+      if (steer) {
+        this.targetVx = Math.cos(this.wanderAngle) * this.speed;
+        this.targetVy = Math.sin(this.wanderAngle) * this.speed * 0.4;
+        if (Math.abs(this.targetVx) > 0.1) this.dir = this.targetVx > 0 ? 1 : -1;
       }
 
       // 마우스 회피
@@ -214,10 +219,9 @@ export class Fish {
         this.targetVy += Math.sin(angle) * flee * 0.3;
         this.tailSpeed = 8;
       } else { this.tailSpeed = lerp(this.tailSpeed, rand(3, 6), 0.02); }
-      const nearEdgeX = (this.x < margin || this.x > W - margin) ? 0.06 : 0.03;
-      const nearEdgeY = (this.y < margin || this.y > H - 140) ? 0.08 : 0.03;
-      this.vx = lerp(this.vx, this.targetVx, nearEdgeX * s);
-      this.vy = lerp(this.vy, this.targetVy, nearEdgeY * s);
+      const lerpRate = steer ? 0.06 : 0.03;
+      this.vx = lerp(this.vx, this.targetVx, lerpRate * s);
+      this.vy = lerp(this.vy, this.targetVy, lerpRate * s);
       this.x += this.vx * s; this.y += this.vy * s;
       this.x = clamp(this.x, 20, W - 20); this.y = clamp(this.y, 20, H - 80);
       if (Math.abs(this.vx) > 0.05) this.dir = this.vx > 0 ? 1 : -1;
