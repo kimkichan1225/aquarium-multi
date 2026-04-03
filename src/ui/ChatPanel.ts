@@ -199,7 +199,7 @@ function getPipStyles(): string {
       background:rgba(5,15,35,0.45);
       pointer-events:none;
     }
-    #pip-overlay>*{pointer-events:auto;}
+    #pip-header,#pip-input-area{pointer-events:auto;}
     #pip-header{
       color:rgba(140,200,255,0.7);font-size:12px;letter-spacing:1px;font-weight:600;
       padding:10px 12px;display:flex;justify-content:space-between;align-items:center;
