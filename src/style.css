@@ -274,10 +274,9 @@ body:hover #bottom-bar{opacity:1}
   color:rgba(140,200,255,0.7);font-size:12px;letter-spacing:1px;font-weight:600;
   padding:10px 12px;margin:0;display:flex;justify-content:space-between;align-items:center;
   border-bottom:1px solid rgba(100,180,255,0.1);flex-shrink:0;
-  cursor:grab;user-select:none;
+  user-select:none;
   background:rgba(10,25,50,0.5);border-radius:12px 12px 0 0;
 }
-#chat-header:active{cursor:grabbing}
 .chat-header-btns{display:flex;align-items:center;gap:4px}
 #chat-panel .panel-close{
   background:none;border:none;color:rgba(140,200,255,0.5);font-size:16px;
