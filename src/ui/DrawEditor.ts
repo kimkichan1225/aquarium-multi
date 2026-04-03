@@ -156,23 +156,21 @@ function renderPreview(): void {
   previewCtx.translate(cx, cy);
   previewCtx.scale(scale, scale);
 
-  // 꼬리: 왼쪽 끝 기준 회전
+  // 꼬리: 그린 위치 기준 약간 회전
   previewCtx.save();
-  previewCtx.translate(-CW/2, 0);
-  previewCtx.rotate(tw);
+  previewCtx.rotate(tw * 0.3);
   previewCtx.drawImage(partCanvases.tail, -CW/2, -CH/2);
   previewCtx.restore();
 
-  // 등지느러미: 위아래 파동
+  // 등지느러미: 약간 위아래 파동
   previewCtx.save();
-  previewCtx.translate(0, fw);
+  previewCtx.translate(0, fw * 0.5);
   previewCtx.drawImage(partCanvases.dorsal, -CW/2, -CH/2);
   previewCtx.restore();
 
-  // 배지느러미: 펄럭임
+  // 배지느러미: 약간 펄럭임
   previewCtx.save();
-  previewCtx.translate(0, CH * 0.15);
-  previewCtx.rotate(pw);
+  previewCtx.rotate(pw * 0.3);
   previewCtx.drawImage(partCanvases.pectoral, -CW/2, -CH/2);
   previewCtx.restore();
 
@@ -384,30 +382,28 @@ export function createCustomDraw(partDataURLs: Record<PartName, string>): {
 
   return {
     images,
-    draw(ctx, sz, _p, tw, fw, t) {
-      const scale = sz / 40; // 기준 크기 대비 스케일
-      const pw = Math.sin(t * 5) * 0.15;
-      const finWave = Math.sin(t * 3) * 2 * scale;
+    draw(ctx, sz, _p, tw, _fw, t) {
+      const scale = sz / 40;
+      const finWave = Math.sin(t * 3) * 1.5 * scale;
+      const pw = Math.sin(t * 5) * 0.1;
 
       ctx.save();
       ctx.scale(scale, scale);
 
-      // 꼬리: 왼쪽 기준 회전
+      // 꼬리: 약간 회전
       ctx.save();
-      ctx.translate(-CW / 2, 0);
-      ctx.rotate(tw);
+      ctx.rotate(tw * 0.3);
       ctx.drawImage(images.tail, -CW / 2, -CH / 2);
       ctx.restore();
 
-      // 등지느러미: 위아래 파동
+      // 등지느러미: 약간 위아래 파동
       ctx.save();
       ctx.translate(0, finWave);
       ctx.drawImage(images.dorsal, -CW / 2, -CH / 2);
       ctx.restore();
 
-      // 배지느러미: 펄럭임
+      // 배지느러미: 약간 펄럭임
       ctx.save();
-      ctx.translate(0, CH * 0.15);
       ctx.rotate(pw);
       ctx.drawImage(images.pectoral, -CW / 2, -CH / 2);
       ctx.restore();
