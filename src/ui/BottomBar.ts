@@ -13,11 +13,13 @@ import { THEMES } from '@/config/themes';
 import { SPECIES } from '@/config/species';
 import { Food } from '@/entities/Food';
 import { foods, invalidateBgCache } from '@/engine/Renderer';
-import { checkFishHover } from '@/engine/FishManager';
+import { checkFishHover, fishes } from '@/engine/FishManager';
 import { emitAddFish, emitFeed, sendCursor } from '@/network/socket';
 import { toggleChat } from './ChatPanel';
 import { navigateToRoom } from '@/engine/router';
 import { showToast } from './Toast';
+import { openFishInfo, closeFishInfo } from './FishInfoPanel';
+import { getCurrentRoom } from '@/state/store';
 
 /** 먹이 주기 */
 function dropFood(x: number, y: number): void {
@@ -104,11 +106,25 @@ export function initBottomBar(): void {
     sendCursor(e.touches[0].clientX, e.touches[0].clientY);
   });
 
-  // 캔버스 클릭 = 먹이 주기 (편집 모드에서는 비활성)
+  // 캔버스 클릭 = 물고기 클릭 확인 → 없으면 먹이 주기
   addEventListener('click', (e) => {
     if (getEditMode()) return;
     const target = e.target as HTMLElement;
-    if (target.closest('#top-bar,#bottom-bar,#creator-overlay,#my-fish-panel,#chat-panel,#chat-floating-btn,#room-editor-panel')) return;
+    if (target.closest('#top-bar,#bottom-bar,#creator-overlay,#my-fish-panel,#chat-panel,#chat-floating-btn,#room-editor-panel,#fish-info-panel')) return;
+
+    // 개인 방에서 물고기 클릭 감지
+    if (getCurrentRoom()) {
+      const cx = e.clientX, cy = e.clientY;
+      let clicked = null, minD = Infinity;
+      for (const f of fishes) {
+        if (f.temporary || !f.dbId) continue;
+        const d = Math.hypot(f.x - cx, f.y - cy);
+        if (d < f.actualSize * 1.2 && d < minD) { clicked = f; minD = d; }
+      }
+      if (clicked) { openFishInfo(clicked); return; }
+      else closeFishInfo();
+    }
+
     dropFood(e.clientX, e.clientY);
   });
 

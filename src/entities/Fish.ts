@@ -3,6 +3,33 @@ import { store } from '@/state/store';
 import { SPECIES } from '@/config/species';
 import type { FishColors, SpeciesDef, FishData } from '@/types';
 import type { Food } from './Food';
+import type { Item } from './Item';
+
+export type Mood = 'happy' | 'neutral' | 'hungry' | 'sad';
+
+const MOOD_ICONS: Record<Mood, string> = {
+  happy: '😊', neutral: '😐', hungry: '😋', sad: '😢',
+};
+
+/** 개인 방에서 유지되는 물고기 상태 (localStorage 저장용) */
+interface FishPersistState {
+  hunger: number;
+  affinity: number;
+  lastFed: number;
+  lastSeen: number;
+}
+
+function loadFishState(dbId: number): FishPersistState {
+  try {
+    const raw = localStorage.getItem(`aq-fish-${dbId}`);
+    if (raw) return JSON.parse(raw);
+  } catch { /* 무시 */ }
+  return { hunger: 80, affinity: 0, lastFed: Date.now(), lastSeen: Date.now() };
+}
+
+function saveFishState(dbId: number, s: FishPersistState): void {
+  try { localStorage.setItem(`aq-fish-${dbId}`, JSON.stringify(s)); } catch { /* 무시 */ }
+}
 
 /** 사망 시 생성되는 거품 */
 interface DeathBubble {
@@ -43,7 +70,17 @@ export class Fish {
   tailSpeed: number;
   finPhase: number;
   chasingFood: Food | null;
+  chasingItem: Item | null;
   wanderAngle: number;
+  // 감정/친밀도 (개인 방 전용)
+  dbId: number | null;
+  hunger: number;        // 0~100 (0=굶주림, 100=배부름)
+  affinity: number;      // 0~100
+  mood: Mood;
+  lastFed: number;       // timestamp
+  petCooldown: number;   // 쓰다듬기 쿨다운
+  moodIconTimer: number; // 아이콘 표시 타이머
+  persistTimer: number;  // localStorage 저장 주기
   z: number;
   actualSize: number;
   opacity: number;
@@ -95,7 +132,25 @@ export class Fish {
     this.tailSpeed = rand(3, 6);
     this.finPhase = rand(0, TAU);
     this.chasingFood = null;
+    this.chasingItem = null;
     this.wanderAngle = rand(0, TAU);
+    // 감정/친밀도 초기화
+    this.dbId = data.dbId ?? null;
+    const saved = this.dbId ? loadFishState(this.dbId) : null;
+    // 오프라인 시간만큼 배고픔 감소 (제곱근 감소 적분: h = (√h0 - t/1200)²)
+    if (saved) {
+      const offlineSec = (Date.now() - saved.lastSeen) / 1000;
+      const sqrtH0 = Math.sqrt(saved.hunger);
+      const newSqrt = sqrtH0 - offlineSec / 1200;
+      saved.hunger = newSqrt > 0 ? newSqrt * newSqrt : 0;
+    }
+    this.hunger = saved?.hunger ?? 80;
+    this.affinity = saved?.affinity ?? 0;
+    this.lastFed = saved?.lastFed ?? Date.now();
+    this.mood = 'neutral';
+    this.petCooldown = 0;
+    this.moodIconTimer = 0;
+    this.persistTimer = 0;
     this.z = (data.z != null) ? data.z : rand(0.6, 1.2);
     this.actualSize = this.size * this.z;
     this.opacity = this.isJellyfish ? (0.3 + this.z * 0.35) : (0.5 + this.z * 0.4);
@@ -115,9 +170,61 @@ export class Fish {
     this.deathBubbles = []; // 사라질 때 생성되는 거품들
   }
 
-  update(dt: number, foods: Food[]): void {
-    const { W, H, mx, my, myUid, frameCount } = store;
+  /** 먹이 먹었을 때 호출 (외부에서) */
+  onEatFood(): void {
+    this.hunger = Math.min(100, this.hunger + 25);
+    this.affinity = Math.min(100, this.affinity + 3);
+    this.lastFed = Date.now();
+    this.moodIconTimer = 2.5;
+    this.mouthOpen = 0.3;
+    setTimeout(() => this.mouthOpen = 0, 300);
+    if (this.dbId) saveFishState(this.dbId, { hunger: this.hunger, affinity: this.affinity, lastFed: this.lastFed, lastSeen: Date.now() });
+  }
+
+  /** 쓰다듬기 (클릭 시 호출) */
+  onPet(): void {
+    if (this.petCooldown > 0) return;
+    this.affinity = Math.min(100, this.affinity + 5);
+    this.mood = 'happy';
+    this.moodIconTimer = 3;
+    this.petCooldown = 8;
+    if (this.dbId) saveFishState(this.dbId, { hunger: this.hunger, affinity: this.affinity, lastFed: this.lastFed, lastSeen: Date.now() });
+  }
+
+  /** 아이템 수집 시 호출 */
+  onCollectItem(): void {
+    this.affinity = Math.min(100, this.affinity + 2);
+    this.moodIconTimer = 2;
+  }
+
+  update(dt: number, foods: Food[], items?: Item[]): void {
+    const { W, H, mx, my, myUid, frameCount, currentRoom } = store;
     const s = dt * 60;
+    const inRoom = !!currentRoom;
+
+    // 감정/친밀도 업데이트 (개인 방 + 내 물고기 + 임시 아닌 것)
+    if (inRoom && !this.temporary && this.dbId) {
+      // 배고픔: 제곱근 비례 감소 (배부를수록 빠르고, 배고플수록 점점 느려짐)
+      // 공식: dh/dt = -sqrt(h/100) / 60 → 100→0에 약 3시간 20분, 슬픔 도달 약 2시간
+      this.hunger = Math.max(0, this.hunger - (dt / 60) * Math.sqrt(this.hunger / 100));
+      // 친밀도: 매우 천천히 자연 감소
+      this.affinity = Math.max(0, this.affinity - dt * 0.002);
+      // 쿨다운
+      if (this.petCooldown > 0) this.petCooldown -= dt;
+      if (this.moodIconTimer > 0) this.moodIconTimer -= dt;
+      // 무드 계산
+      if (this.hunger > 70) this.mood = 'happy';
+      else if (this.hunger > 40) this.mood = 'neutral';
+      else if (this.hunger > 15) this.mood = 'hungry';
+      else this.mood = 'sad';
+      // localStorage 저장 (10초마다)
+      this.persistTimer -= dt;
+      if (this.persistTimer <= 0) {
+        this.persistTimer = 10;
+        saveFishState(this.dbId, { hunger: this.hunger, affinity: this.affinity, lastFed: this.lastFed, lastSeen: Date.now() });
+      }
+    }
+
     this.tailPhase += this.tailSpeed * dt;
     this.finPhase += 4 * dt;
     this.blinkTimer -= dt;
@@ -166,36 +273,84 @@ export class Fish {
       if (this.y > H + this.actualSize * 2) this.y = -this.actualSize * 2;
       this.x = clamp(this.x, 20, W - 20);
     } else {
+      // 기분에 따른 속도 보정
+      const moodSpeedMult = inRoom && this.dbId
+        ? (this.mood === 'happy' ? 1.3 : this.mood === 'sad' ? 0.6 : 1.0)
+        : 1.0;
+      const effectiveSpeed = this.speed * moodSpeedMult;
+
       // 물고기 움직임
       if (this.chasingFood && this.chasingFood.eaten) this.chasingFood = null;
+      if (this.chasingItem && this.chasingItem.collected) this.chasingItem = null;
+
       if (this.chasingFood) {
         const f = this.chasingFood, dx = f.x - this.x, dy = f.y - this.y, d = Math.hypot(dx, dy);
-        if (d < this.actualSize * 0.5) { f.eaten = true; this.chasingFood = null; this.mouthOpen = 0.3; setTimeout(() => this.mouthOpen = 0, 300); }
-        else { this.targetVx = (dx / d) * this.speed * 2.5; this.targetVy = (dy / d) * this.speed * 2.5; this.dir = this.targetVx > 0 ? 1 : -1; }
+        if (d < this.actualSize * 0.5) {
+          f.eaten = true; this.chasingFood = null;
+          this.onEatFood();
+        } else {
+          this.targetVx = (dx / d) * effectiveSpeed * 2.5;
+          this.targetVy = (dy / d) * effectiveSpeed * 2.5;
+          this.dir = this.targetVx > 0 ? 1 : -1;
+        }
+      } else if (this.chasingItem) {
+        const it = this.chasingItem, dx = it.x - this.x, dy = it.y - this.y, d = Math.hypot(dx, dy);
+        if (d < this.actualSize * 0.8) {
+          it.collected = true;
+          it.collectedBy = this.fishName;
+          this.chasingItem = null;
+          this.onCollectItem();
+        } else {
+          this.targetVx = (dx / d) * effectiveSpeed * 1.5;
+          this.targetVy = (dy / d) * effectiveSpeed * 1.5;
+          this.dir = this.targetVx > 0 ? 1 : -1;
+        }
       } else {
-        this.turnCooldown -= dt;
-        if (this.turnCooldown <= 0) {
-          this.wanderAngle += rand(-0.8, 0.8);
-          // 가장자리에 있으면 wanderAngle을 화면 중심 쪽으로 보정
-          const safeX = W * 0.15, safeY = H * 0.15, safeB = H * 0.2;
-          if (this.x < safeX || this.x > W - safeX || this.y < safeY || this.y > H - safeB) {
-            const toCenter = Math.atan2(H * 0.45 - this.y, W * 0.5 - this.x);
-            this.wanderAngle = toCenter + rand(-0.5, 0.5);
+        // 친밀도 높으면 마우스 따라오기, 낮으면 회피
+        const curDist = dist(this.x, this.y, mx, my);
+        if (inRoom && this.dbId && this.affinity >= 60 && curDist < 120) {
+          const dx = mx - this.x, dy = my - this.y, d = Math.hypot(dx, dy);
+          if (d > 30) {
+            this.targetVx = (dx / d) * effectiveSpeed * 0.8;
+            this.targetVy = (dy / d) * effectiveSpeed * 0.8;
+            this.dir = this.targetVx > 0 ? 1 : -1;
           }
-          this.targetVx = Math.cos(this.wanderAngle) * this.speed;
-          this.targetVy = Math.sin(this.wanderAngle) * this.speed * 0.4;
-          if (Math.abs(this.targetVx) > 0.1) this.dir = this.targetVx > 0 ? 1 : -1;
-          this.turnCooldown = rand(2, 6);
+        } else {
+          this.turnCooldown -= dt;
+          if (this.turnCooldown <= 0) {
+            this.wanderAngle += rand(-0.8, 0.8);
+            // 가장자리에 있으면 wanderAngle을 화면 중심 쪽으로 보정
+            const safeX = W * 0.15, safeY = H * 0.15, safeB = H * 0.2;
+            if (this.x < safeX || this.x > W - safeX || this.y < safeY || this.y > H - safeB) {
+              const toCenter = Math.atan2(H * 0.45 - this.y, W * 0.5 - this.x);
+              this.wanderAngle = toCenter + rand(-0.5, 0.5);
+            }
+            this.targetVx = Math.cos(this.wanderAngle) * effectiveSpeed;
+            this.targetVy = Math.sin(this.wanderAngle) * effectiveSpeed * 0.4;
+            if (Math.abs(this.targetVx) > 0.1) this.dir = this.targetVx > 0 ? 1 : -1;
+            this.turnCooldown = rand(2, 6);
+          }
         }
         if (foods.length > 0 && (frameCount + this.id) % FOOD_SEARCH_INTERVAL === 0) {
-          let closest: Food | null = null, closestDist2 = 90000; // 300^2
+          let closest: Food | null = null, closestDist2 = 90000;
           for (let fi = 0; fi < foods.length; fi++) { const f = foods[fi]; if (f.eaten) continue; const dx = f.x - this.x, dy = f.y - this.y, d2 = dx * dx + dy * dy; if (d2 < closestDist2) { closest = f; closestDist2 = d2; } }
           if (closest) this.chasingFood = closest;
         }
+        // 아이템 탐색 (개인 방, 먹이 없을 때)
+        if (inRoom && items && items.length > 0 && !this.chasingFood && (frameCount + this.id) % (FOOD_SEARCH_INTERVAL * 3) === 0) {
+          let closestItem = null, closestD2 = 200 * 200;
+          for (const it of items) {
+            if (it.collected) continue;
+            const dx = it.x - this.x, dy = it.y - this.y, d2 = dx * dx + dy * dy;
+            if (d2 < closestD2) { closestItem = it; closestD2 = d2; }
+          }
+          if (closestItem) this.chasingItem = closestItem;
+        }
       }
-      // 마우스 회피
+      // 마우스 회피 (친밀도 60 미만일 때만)
+      const followingMouse = inRoom && this.dbId && this.affinity >= 60;
       const curDist = dist(this.x, this.y, mx, my);
-      if (curDist < 70 && !this.chasingFood) {
+      if (!followingMouse && curDist < 70 && !this.chasingFood && !this.chasingItem) {
         const angle = Math.atan2(this.y - my, this.x - mx);
         const flee = (70 - curDist) / 70;
         this.targetVx += Math.cos(angle) * flee * 1.2;
@@ -270,7 +425,19 @@ export class Fish {
   }
 
   _drawBody(ctx: CanvasRenderingContext2D): void {
-    const { time } = store;
+    const { time, currentRoom } = store;
+
+    // 기분 아이콘 표시 (개인 방 + dbId 있는 물고기)
+    if (currentRoom && this.dbId && this.moodIconTimer > 0) {
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, this.moodIconTimer);
+      const iconY = -this.actualSize - 28;
+      ctx.font = `${Math.round(this.actualSize * 0.55 + 8)}px system-ui`;
+      ctx.textAlign = 'center';
+      ctx.fillText(MOOD_ICONS[this.mood], 0, iconY);
+      ctx.restore();
+    }
+
     // 이름 표시 (호버 또는 생성 직후)
     if (this.showName || this.nameTimer > 0) {
       ctx.save();

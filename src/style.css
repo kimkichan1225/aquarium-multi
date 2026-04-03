@@ -510,3 +510,35 @@ body:hover #bottom-bar{opacity:1}
   border-radius:6px;color:rgba(130,230,170,0.9);transition:all 0.2s;
 }
 .invite-enter-btn:hover{background:rgba(60,160,120,0.4);border-color:rgba(80,200,150,0.5)}
+
+/* 물고기 정보 패널 */
+#fish-info-panel{
+  position:fixed;right:-260px;top:50%;transform:translateY(-50%);
+  width:240px;background:rgba(5,15,35,0.88);backdrop-filter:blur(14px);
+  border:1px solid rgba(100,180,255,0.18);border-radius:14px;
+  z-index:300;padding:14px;display:flex;flex-direction:column;gap:10px;
+  box-shadow:0 8px 32px rgba(0,0,0,0.5);
+  transition:right 0.3s cubic-bezier(.4,0,.2,1);
+}
+#fish-info-panel.open{right:16px}
+.fip-header{display:flex;align-items:center;gap:6px}
+.fip-name{color:rgba(180,230,255,0.9);font-size:13px;font-weight:700;flex:1}
+.fip-species{color:rgba(140,200,255,0.5);font-size:10px}
+.fip-close{background:none;border:none;color:rgba(140,200,255,0.5);font-size:16px;cursor:pointer;padding:0 4px;border-radius:4px;margin-left:auto}
+.fip-close:hover{color:#fff;background:rgba(255,255,255,0.1)}
+.fip-mood{font-size:13px;font-weight:600;text-align:center;padding:4px 0}
+.fip-row{display:flex;align-items:center;gap:6px;font-size:11px}
+.fip-label{color:rgba(140,200,255,0.5);width:44px;flex-shrink:0}
+.fip-bar{flex:1;height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden}
+.fip-bar-fill{height:100%;border-radius:3px;transition:width 0.5s}
+.fip-bar-fill.hunger{background:linear-gradient(90deg,#F07050,#80D080)}
+.fip-hearts{flex:1;font-size:12px;letter-spacing:1px}
+.fip-val{color:rgba(200,220,240,0.7);font-size:10px;width:24px;text-align:right}
+.fip-val-full{color:rgba(200,220,240,0.7);font-size:10px;flex:1}
+.fip-pet-btn{
+  width:100%;padding:8px;border-radius:8px;border:1px solid rgba(100,220,180,0.25);
+  background:rgba(60,180,120,0.2);color:rgba(130,230,180,0.9);
+  font-size:12px;cursor:pointer;transition:all 0.2s;
+}
+.fip-pet-btn:hover:not(:disabled){background:rgba(60,180,120,0.4)}
+.fip-pet-btn:disabled{opacity:0.4;cursor:not-allowed}

@@ -31,6 +31,18 @@ export const bubbles: Bubble[] = [];
 import { Food } from '@/entities/Food';
 export const foods: Food[] = [];
 
+// ── 아이템 (개인 방 전용) ──
+import { Item, CollectedItem } from '@/entities/Item';
+import type { ItemType } from '@/entities/Item';
+import { getCurrentRoom } from '@/state/store';
+export const items: Item[] = [];
+export const collectedItems: CollectedItem[] = [];
+let itemSpawnTimer = 0;
+const ITEM_SPAWN_INTERVAL = 45; // 45초마다 아이템 스폰
+const MAX_ITEMS = 5;
+
+const ITEM_TYPES: ItemType[] = ['shell', 'gem', 'starfish'];
+
 // ── 다른 유저 커서 ──
 import type { RemoteCursor } from '@/types';
 export const remoteCursors: Map<string, RemoteCursor> = new Map();
@@ -192,8 +204,29 @@ function animate(now: number): void {
     else foods[i].draw(ctx);
   }
 
+  // 아이템 (개인 방 전용)
+  if (getCurrentRoom()) {
+    itemSpawnTimer -= dt;
+    if (itemSpawnTimer <= 0 && items.filter(it => !it.collected).length < MAX_ITEMS) {
+      const W = getW(), H = getH();
+      const type = ITEM_TYPES[Math.floor(Math.random() * ITEM_TYPES.length)];
+      items.push(new Item(rand(80, W - 80), H - rand(90, 130), type));
+      itemSpawnTimer = ITEM_SPAWN_INTERVAL;
+    }
+    for (let i = items.length - 1; i >= 0; i--) {
+      const it = items[i];
+      it.draw(ctx, time);
+      if (it.collected) {
+        collectedItems.push({ type: it.type, collectedAt: Date.now(), fishName: it.collectedBy || '?' });
+        items.splice(i, 1);
+      }
+    }
+  } else {
+    items.length = 0; // 개인 방 아닐 때 정리
+  }
+
   // 물고기 업데이트
-  for (const f of fishes) f.update(dt, foods);
+  for (const f of fishes) f.update(dt, foods, items);
 
   // 죽은 임시 물고기 제거
   for (let i = fishes.length - 1; i >= 0; i--) {
