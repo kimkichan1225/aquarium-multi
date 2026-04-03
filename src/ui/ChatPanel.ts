@@ -198,14 +198,21 @@ function getPipStyles(): string {
       overflow:hidden;
       background:rgba(5,15,35,0.45);
       pointer-events:none;
+      transition:background 0.3s;
     }
+    #pip-overlay.hide-chat{background:rgba(5,15,35,0.08)}
+    #pip-overlay.hide-chat #pip-messages,
+    #pip-overlay.hide-chat #pip-input-area{opacity:0;pointer-events:none}
     #pip-header,#pip-input-area{pointer-events:auto;}
     #pip-header{
       color:rgba(140,200,255,0.7);font-size:12px;letter-spacing:1px;font-weight:600;
-      padding:10px 12px;display:flex;justify-content:space-between;align-items:center;
+      padding:8px 10px;display:flex;justify-content:space-between;align-items:center;
       border-bottom:1px solid rgba(100,180,255,0.1);flex-shrink:0;
       background:rgba(10,25,50,0.5);
+      transition:background 0.3s,opacity 0.3s;
     }
+    #pip-overlay.hide-chat #pip-header{background:rgba(10,25,50,0.25);opacity:0.6}
+    #pip-messages,#pip-input-area{transition:opacity 0.3s}
     #pip-messages{
       flex:1;overflow-y:auto;padding:8px 10px;
       display:flex;flex-direction:column;gap:4px;
@@ -255,11 +262,12 @@ function getPipStyles(): string {
       padding:7px 12px;cursor:pointer;flex-shrink:0;
     }
     #pip-send:hover{background:rgba(60,180,120,0.35)}
-    .pip-back-btn{
-      background:none;border:none;color:rgba(140,200,255,0.5);font-size:11px;
-      cursor:pointer;padding:2px 6px;border-radius:4px;
+    .pip-toggle-btn{
+      background:rgba(255,255,255,0.08);border:1px solid rgba(100,180,255,0.15);
+      font-size:14px;cursor:pointer;padding:3px 8px;border-radius:6px;
+      transition:all 0.2s;
     }
-    .pip-back-btn:hover{color:#fff;background:rgba(255,255,255,0.1)}
+    .pip-toggle-btn:hover{background:rgba(255,255,255,0.15)}
   `;
 }
 
@@ -316,8 +324,8 @@ async function enterPip(): Promise<void> {
     overlay.id = 'pip-overlay';
     overlay.innerHTML = `
       <div id="pip-header">
-        <span>채팅</span>
-        <button class="pip-back-btn" id="pip-back">← 돌아가기</button>
+        <span id="pip-title">채팅</span>
+        <button class="pip-toggle-btn" id="pip-toggle">💬</button>
       </div>
       <div id="pip-messages"></div>
       <div id="pip-input-area">
@@ -351,9 +359,15 @@ async function enterPip(): Promise<void> {
       if (e.key === 'Enter') pipSendChat();
     });
 
-    // 돌아가기 버튼
-    doc.getElementById('pip-back')!.addEventListener('click', () => {
-      pipWindow?.close();
+    // 채팅 토글 버튼
+    const toggleBtn = doc.getElementById('pip-toggle')!;
+    const titleEl = doc.getElementById('pip-title')!;
+    let chatVisible = true;
+    toggleBtn.addEventListener('click', () => {
+      chatVisible = !chatVisible;
+      overlay.classList.toggle('hide-chat', !chatVisible);
+      toggleBtn.textContent = chatVisible ? '💬' : '🐠';
+      titleEl.textContent = chatVisible ? '채팅' : '아쿠아리움';
     });
 
     // 기존 채팅 패널 숨기기
