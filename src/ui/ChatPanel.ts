@@ -183,8 +183,18 @@ function getPipStyles(): string {
     *{box-sizing:border-box;margin:0;padding:0}
     body{
       font-family:'Pretendard','Apple SD Gothic Neo',system-ui,sans-serif;
-      background:rgba(5,15,35,0.95);color:rgba(200,220,240,0.85);
+      background:#050f23;color:rgba(200,220,240,0.85);
       display:flex;flex-direction:column;height:100vh;overflow:hidden;
+      position:relative;
+    }
+    #pip-bg-video{
+      position:fixed;top:0;left:0;width:100%;height:100%;
+      object-fit:cover;z-index:0;pointer-events:none;
+    }
+    #pip-overlay{
+      position:relative;z-index:1;display:flex;flex-direction:column;
+      height:100vh;overflow:hidden;
+      background:rgba(5,15,35,0.55);
     }
     #pip-header{
       color:rgba(140,200,255,0.7);font-size:12px;letter-spacing:1px;font-weight:600;
@@ -268,8 +278,22 @@ async function enterPip(): Promise<void> {
     style.textContent = getPipStyles();
     doc.head.appendChild(style);
 
+    // 배경 비디오 (아쿠아리움 캔버스 스트리밍)
+    const mainCanvas = document.getElementById('c') as HTMLCanvasElement;
+    if (mainCanvas) {
+      const stream = (mainCanvas as any).captureStream(15); // 15fps
+      const video = doc.createElement('video');
+      video.id = 'pip-bg-video';
+      video.srcObject = stream;
+      video.autoplay = true;
+      video.muted = true;
+      doc.body.appendChild(video);
+    }
+
     // PiP 창 구조 생성
-    doc.body.innerHTML = `
+    const overlay = doc.createElement('div');
+    overlay.id = 'pip-overlay';
+    overlay.innerHTML = `
       <div id="pip-header">
         <span>채팅</span>
         <button class="pip-back-btn" id="pip-back">← 돌아가기</button>
@@ -280,6 +304,7 @@ async function enterPip(): Promise<void> {
         <button id="pip-send">전송</button>
       </div>
     `;
+    doc.body.appendChild(overlay);
 
     // 기존 메시지 복사
     const pipMessages = doc.getElementById('pip-messages')!;
