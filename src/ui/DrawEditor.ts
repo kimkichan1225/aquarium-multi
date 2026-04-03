@@ -10,6 +10,7 @@ interface DrawState {
   brushSize: number;
   brushColor: string;
   isEraser: boolean;
+  isFill: boolean;
 }
 
 const PART_LABELS: Record<PartName, string> = {
@@ -54,6 +55,7 @@ const state: DrawState = {
   brushSize: 6,
   brushColor: '#4488FF',
   isEraser: false,
+  isFill: false,
 };
 
 let isDrawing = false;
@@ -192,6 +194,52 @@ function getCanvasPos(e: MouseEvent | TouchEvent): [number, number] {
   return [(e.clientX - rect.left) * scaleX, (e.clientY - rect.top) * scaleY];
 }
 
+/** 채우기 (flood fill) */
+function floodFill(startX: number, startY: number): void {
+  const ctx = partCtxs[state.activePart];
+  const imgData = ctx.getImageData(0, 0, CW, CH);
+  const data = imgData.data;
+  const sx = Math.round(startX), sy = Math.round(startY);
+  if (sx < 0 || sx >= CW || sy < 0 || sy >= CH) return;
+
+  // 채울 색상 파싱
+  const tempCanvas = document.createElement('canvas');
+  tempCanvas.width = 1; tempCanvas.height = 1;
+  const tempCtx = tempCanvas.getContext('2d')!;
+  tempCtx.fillStyle = state.brushColor;
+  tempCtx.fillRect(0, 0, 1, 1);
+  const fillColor = tempCtx.getImageData(0, 0, 1, 1).data;
+
+  const startIdx = (sy * CW + sx) * 4;
+  const targetR = data[startIdx], targetG = data[startIdx + 1], targetB = data[startIdx + 2], targetA = data[startIdx + 3];
+
+  // 같은 색이면 무시
+  if (targetR === fillColor[0] && targetG === fillColor[1] && targetB === fillColor[2] && targetA === fillColor[3]) return;
+
+  const tolerance = 30;
+  const match = (i: number) =>
+    Math.abs(data[i] - targetR) <= tolerance &&
+    Math.abs(data[i+1] - targetG) <= tolerance &&
+    Math.abs(data[i+2] - targetB) <= tolerance &&
+    Math.abs(data[i+3] - targetA) <= tolerance;
+
+  const stack: [number, number][] = [[sx, sy]];
+  const visited = new Uint8Array(CW * CH);
+
+  while (stack.length > 0) {
+    const [x, y] = stack.pop()!;
+    const vi = y * CW + x;
+    if (x < 0 || x >= CW || y < 0 || y >= CH || visited[vi]) continue;
+    const idx = vi * 4;
+    if (!match(idx)) continue;
+    visited[vi] = 1;
+    data[idx] = fillColor[0]; data[idx+1] = fillColor[1]; data[idx+2] = fillColor[2]; data[idx+3] = fillColor[3];
+    stack.push([x+1, y], [x-1, y], [x, y+1], [x, y-1]);
+  }
+  ctx.putImageData(imgData, 0, 0);
+  compositeToMain();
+}
+
 function drawLine(x0: number, y0: number, x1: number, y1: number): void {
   const ctx = partCtxs[state.activePart];
   ctx.lineWidth = state.brushSize;
@@ -214,9 +262,14 @@ function drawLine(x0: number, y0: number, x1: number, y1: number): void {
 
 function onDrawStart(e: MouseEvent | TouchEvent): void {
   e.preventDefault();
-  isDrawing = true;
   saveHistory();
-  [lastX, lastY] = getCanvasPos(e);
+  const [x, y] = getCanvasPos(e);
+  if (state.isFill) {
+    floodFill(x, y);
+    return;
+  }
+  isDrawing = true;
+  lastX = x; lastY = y;
   drawLine(lastX, lastY, lastX, lastY);
 }
 
@@ -306,10 +359,11 @@ function createEditorDOM(): void {
   // 도구 바
   const toolsEl = document.getElementById('de-tools')!;
   const tools = [
-    { label: '✏️3', action: () => { state.brushSize = 3; state.isEraser = false; } },
-    { label: '✏️6', action: () => { state.brushSize = 6; state.isEraser = false; } },
-    { label: '✏️12', action: () => { state.brushSize = 12; state.isEraser = false; } },
-    { label: '🧹', action: () => { state.isEraser = true; state.brushSize = 16; } },
+    { label: '✏️3', action: () => { state.brushSize = 3; state.isEraser = false; state.isFill = false; } },
+    { label: '✏️6', action: () => { state.brushSize = 6; state.isEraser = false; state.isFill = false; } },
+    { label: '✏️12', action: () => { state.brushSize = 12; state.isEraser = false; state.isFill = false; } },
+    { label: '🧹', action: () => { state.isEraser = true; state.isFill = false; state.brushSize = 16; } },
+    { label: '🪣', action: () => { state.isFill = true; state.isEraser = false; } },
     { label: '↩', action: undo },
     { label: '🗑️파트', action: clearPart },
     { label: '🗑️전체', action: clearAll },
