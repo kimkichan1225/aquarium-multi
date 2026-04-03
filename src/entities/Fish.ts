@@ -176,6 +176,12 @@ export class Fish {
         this.turnCooldown -= dt;
         if (this.turnCooldown <= 0) {
           this.wanderAngle += rand(-0.8, 0.8);
+          // 가장자리에 있으면 wanderAngle을 화면 중심 쪽으로 보정
+          const safeX = W * 0.15, safeY = H * 0.15, safeB = H * 0.2;
+          if (this.x < safeX || this.x > W - safeX || this.y < safeY || this.y > H - safeB) {
+            const toCenter = Math.atan2(H * 0.45 - this.y, W * 0.5 - this.x);
+            this.wanderAngle = toCenter + rand(-0.5, 0.5);
+          }
           this.targetVx = Math.cos(this.wanderAngle) * this.speed;
           this.targetVy = Math.sin(this.wanderAngle) * this.speed * 0.4;
           if (Math.abs(this.targetVx) > 0.1) this.dir = this.targetVx > 0 ? 1 : -1;
@@ -199,14 +205,14 @@ export class Fish {
       this.vx = lerp(this.vx, this.targetVx, 0.03 * s);
       this.vy = lerp(this.vy, this.targetVy, 0.03 * s);
 
-      // 경계 밀어내기: vx/vy에 직접 힘 추가
-      const edgeM = 120;
-      if (this.x < edgeM) this.vx += (edgeM - this.x) / edgeM * 0.25 * s;
-      if (this.x > W - edgeM) this.vx -= (this.x - (W - edgeM)) / edgeM * 0.25 * s;
-      if (this.y < edgeM) this.vy += (edgeM - this.y) / edgeM * 0.25 * s;
-      if (this.y > H - 160) this.vy -= (this.y - (H - 160)) / 160 * 0.25 * s;
+      // 경계 밀어내기: vx/vy에 직접 힘 추가 (제곱 비례로 가장자리일수록 강하게)
+      const edgeM = 150;
+      if (this.x < edgeM) { const r = (edgeM - this.x) / edgeM; this.vx += r * r * 0.6 * s; }
+      if (this.x > W - edgeM) { const r = (this.x - (W - edgeM)) / edgeM; this.vx -= r * r * 0.6 * s; }
+      if (this.y < edgeM) { const r = (edgeM - this.y) / edgeM; this.vy += r * r * 0.6 * s; }
+      if (this.y > H - 180) { const r = (this.y - (H - 180)) / 180; this.vy -= r * r * 0.6 * s; }
       this.x += this.vx * s; this.y += this.vy * s;
-      this.x = clamp(this.x, 50, W - 50); this.y = clamp(this.y, 50, H - 120);
+      this.x = clamp(this.x, 40, W - 40); this.y = clamp(this.y, 40, H - 100);
       if (Math.abs(this.vx) > 0.05) this.dir = this.vx > 0 ? 1 : -1;
     }
   }
