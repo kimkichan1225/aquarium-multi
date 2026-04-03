@@ -104,8 +104,8 @@ export class Fish {
     const { W, H } = store;
     let si = data.speciesIdx !== undefined ? data.speciesIdx : Math.floor(rand(0, SPECIES.length));
 
-    // 커스텀 파트가 있으면 동적으로 species 복원
-    if (data.customParts && si >= SPECIES.length) {
+    // 커스텀 파트가 있으면 항상 새로운 species로 생성 (각 물고기마다 고유)
+    if (data.customParts) {
       const custom = createCustomDraw(data.customParts as Record<any, string>);
       si = SPECIES.length;
       SPECIES.push({
