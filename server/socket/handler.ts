@@ -38,14 +38,6 @@ interface RemoveFishData {
   uid?: string;
 }
 
-// fishPositions 업데이트 타입
-interface FishPositionUpdate {
-  id: number;
-  x: number;
-  y: number;
-  dir: number;
-}
-
 // chat 이벤트 데이터 타입
 interface ChatData {
   name?: string;
@@ -75,7 +67,7 @@ function getSocketRoom(socketId: string): string {
 }
 
 // 방 이름으로 물고기 필터링
-function getFishesForRoom(roomName: string): Array<Fish & { rx?: number; ry?: number }> {
+function getFishesForRoom(roomName: string): Fish[] {
   return Array.from(fishes.values())
     .filter((f: Fish) => {
       if (roomName === 'lobby') {
@@ -85,11 +77,7 @@ function getFishesForRoom(roomName: string): Array<Fish & { rx?: number; ry?: nu
       // room:닉네임 → roomOwner 또는 roomId로 매칭
       const roomOwner = roomName.replace('room:', '');
       return f.roomOwner === roomOwner;
-    })
-    .map((f: Fish) => ({
-      ...f,
-      ...(f.rx != null ? { rx: f.rx, ry: f.ry } : {}),
-    }));
+    });
 }
 
 // ── 소켓 핸들러 등록 ──
@@ -239,20 +227,6 @@ function registerSocketHandlers(io: Server): void {
         const room = getSocketRoom(socket.id);
         io.to(room).emit('fishRemoved', fishId);
       }
-    });
-
-    // 물고기 위치 동기화
-    socket.on('fishPositions', (updates: FishPositionUpdate[]) => {
-      for (const u of updates) {
-        const fish: Fish | undefined = fishes.get(u.id);
-        if (fish) {
-          fish.rx = u.x;
-          fish.ry = u.y;
-          fish.dir = u.dir;
-        }
-      }
-      const room = getSocketRoom(socket.id);
-      socket.to(room).emit('fishPositions', updates);
     });
 
     // 채팅 히스토리 전송

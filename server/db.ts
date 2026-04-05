@@ -135,8 +135,6 @@ export interface Fish {
   temporary: boolean;
   lifespan?: number | null;
   createdAt: number | Date;
-  rx?: number;
-  ry?: number;
 }
 
 // DB에서 영구 물고기 로드

@@ -53,9 +53,6 @@ export class Fish {
   fishName: string;
   x: number;
   y: number;
-  remoteX: number | null;
-  remoteY: number | null;
-  lastRemoteUpdate: number | null;
   palette: FishColors;
   size: number;
   speed: number;
@@ -126,12 +123,8 @@ export class Fish {
     this.ownerId = data.ownerId;
     this.ownerName = data.ownerName || '익명';
     this.fishName = data.name || '이름없음';
-    this.x = (data.rx != null ? data.rx * W : null) ?? data.x ?? rand(100, W - 100);
-    this.y = (data.ry != null ? data.ry * H : null) ?? data.y ?? rand(120, H - 200);
-    this.remoteX = null;
-    this.remoteY = null;
-    this.lastRemoteUpdate = null;
-    if (data.rx != null) { this.remoteX = data.rx * W; this.remoteY = data.ry! * H; this.lastRemoteUpdate = Date.now(); }
+    this.x = data.x ?? rand(100, W - 100);
+    this.y = data.y ?? rand(120, H - 200);
     this.palette = data.customColors || this.species.defaultColors;
     const sr = this.species.sizeRange;
     this.size = (data.size != null) ? data.size : rand(sr[0], sr[1]);
@@ -257,18 +250,6 @@ export class Fish {
     if (this.dying) {
       this.dyingProgress += dt * 0.5; // ~2초에 걸쳐 사라짐
       if (this.dyingProgress >= 1) this.dead = true;
-    }
-
-    // 다른 유저 소유 물고기: 수신 위치로 lerp (AI 비활성)
-    // 3초 이상 업데이트 없으면 자체 AI로 전환
-    if (this.ownerId !== myUid && this.remoteX != null) {
-      if (this.lastRemoteUpdate && (Date.now() - this.lastRemoteUpdate > 3000)) {
-        this.remoteX = null; this.remoteY = null;
-      } else {
-        this.x = lerp(this.x, this.remoteX, 0.18 * s);
-        this.y = lerp(this.y, this.remoteY!, 0.18 * s);
-        return;
-      }
     }
 
     if (this.isJellyfish) {

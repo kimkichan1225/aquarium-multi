@@ -9,8 +9,7 @@ import {
 import { Fish } from '@/entities/Fish';
 import { Food } from '@/entities/Food';
 import {
-  fishes, fishById, addFish, removeFish, clearAllFish,
-  setFishSortDirty,
+  fishById, addFish, removeFish, clearAllFish,
 } from '@/engine/FishManager';
 import { foods, remoteCursors } from '@/engine/Renderer';
 import { addChatMessage, handleChatHistory, addInviteCard, removeChatMessage } from '@/ui/ChatPanel';
@@ -34,31 +33,6 @@ export function sendCursor(x: number, y: number): void {
     socket.emit('cursor', { x: x / W, y: y / H, name: getMyName() || '익명' });
     lastCursorSend = now;
   }
-}
-
-// ── 내 물고기 위치 주기적 전송 ──
-const lastSentPos: Map<number, { x: number; y: number; dir: number }> = new Map();
-
-function startPositionSync(): void {
-  setInterval(() => {
-    const W = getW();
-    const H = getH();
-    const myUid = getMyUid();
-    const myFish = fishes.filter(f => f.ownerId === myUid && !f.dying && !f.dead);
-    if (myFish.length === 0) return;
-    const updates: { id: number; x: number; y: number; dir: number }[] = [];
-    for (const f of myFish) {
-      const rx = Math.round(f.x / W * 1000) / 1000;
-      const ry = Math.round(f.y / H * 1000) / 1000;
-      const key = f.id;
-      const prev = lastSentPos.get(key);
-      if (!prev || Math.abs(prev.x - rx) > 0.002 || Math.abs(prev.y - ry) > 0.002 || prev.dir !== f.dir) {
-        updates.push({ id: f.id, x: rx, y: ry, dir: f.dir });
-        lastSentPos.set(key, { x: rx, y: ry, dir: f.dir });
-      }
-    }
-    if (updates.length > 0) socket.emit('fishPositions', updates);
-  }, 200);
 }
 
 // ── emit 헬퍼 함수들 ──
@@ -180,23 +154,6 @@ export function initSocket(): void {
     updateMyFishList();
   });
 
-  // 다른 클라이언트에서 보낸 물고기 위치 수신
-  socket.on('fishPositions', (updates: { id: number; x: number; y: number; dir: number }[]) => {
-    const W = getW();
-    const H = getH();
-    const myUid = getMyUid();
-    const now = Date.now();
-    for (const u of updates) {
-      const fish = fishById.get(u.id);
-      if (fish && fish.ownerId !== myUid) {
-        fish.remoteX = u.x * W;
-        fish.remoteY = u.y * H;
-        fish.dir = u.dir;
-        fish.lastRemoteUpdate = now;
-      }
-    }
-  });
-
   socket.on('fishRemoved', (fishId: number) => {
     const fish = fishById.get(fishId);
     if (!fish) return;
@@ -253,6 +210,4 @@ export function initSocket(): void {
     updateMyFishList();
   });
 
-  // 위치 동기화 시작
-  startPositionSync();
 }
